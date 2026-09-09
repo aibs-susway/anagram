@@ -1,0 +1,1393 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anagram</title>
+    <style>
+      :root {
+        --bg: #f3f5fb;
+        --panel: rgba(255,255,255,0.8);
+        --card: #ffffff;
+        --text: #1a2435;
+        --muted: #5c6f87;
+        --primary: #5c6ef8;
+        --primary-strong: #4354d5;
+        --accent: #6ee7c8;
+        --success: #1f8f5f;
+        --success-bg: #e8f8f0;
+        --danger: #b42318;
+        --danger-bg: #fee4e2;
+        --border: rgba(93, 113, 150, 0.18);
+        --shadow: 0 20px 45px rgba(32, 52, 89, 0.12);
+      }
+
+      body.light {
+        --bg: #f3f5fb;
+        --panel: rgba(255,255,255,0.8);
+        --card: #ffffff;
+        --text: #1a2435;
+        --muted: #5c6f87;
+        --primary: #5c6ef8;
+        --primary-strong: #4354d5;
+        --accent: #6ee7c8;
+        --success: #1f8f5f;
+        --success-bg: #e8f8f0;
+        --danger: #b42318;
+        --danger-bg: #fee4e2;
+        --border: rgba(93, 113, 150, 0.18);
+      }
+
+      body.dark {
+        --bg: #0d1628;
+        --panel: rgba(19,29,45,0.8);
+        --card: #14213b;
+        --text: #edf3ff;
+        --muted: #bfd1ef;
+        --primary: #8da7ff;
+        --primary-strong: #738df7;
+        --accent: #76d9bf;
+        --success: #8de5b0;
+        --success-bg: #113425;
+        --danger: #ff9a9a;
+        --danger-bg: #3a1d23;
+        --border: rgba(180, 200, 233, 0.2);
+      }
+
+      body.high-contrast {
+        --bg: #000000;
+        --panel: rgba(17,17,17,0.96);
+        --card: #111111;
+        --text: #ffffff;
+        --muted: #f4f4f4;
+        --primary: #ffff00;
+        --primary-strong: #d7d700;
+        --accent: #00ff00;
+        --success: #00ff00;
+        --success-bg: #001800;
+        --danger: #ff3333;
+        --danger-bg: #210000;
+        --border: #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(92,110,248,0.18), transparent 28%),
+          linear-gradient(180deg, rgba(255,255,255,0.06), transparent),
+          var(--bg);
+        color: var(--text);
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      button, input, select, textarea {
+        font: inherit;
+      }
+
+      button {
+        border: none;
+        border-radius: 12px;
+        padding: 10px 16px;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+
+      button:hover {
+        opacity: 0.97;
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        background: rgba(92,110,248,0.12);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      input, select, textarea {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        padding: 11px 12px;
+      }
+
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+        background: rgba(243,245,251,0.7);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 16px 20px;
+      }
+
+      body.dark .topbar,
+      body.high-contrast .topbar {
+        background: rgba(19,29,45,0.8);
+      }
+
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .brand-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        line-height: 1;
+      }
+
+      .brand small {
+        color: var(--muted);
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .ecash-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 9px 14px;
+        background: rgba(92,110,248,0.12);
+        border: 1px solid var(--border);
+        font-weight: 700;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .tab-button {
+        border-radius: 10px;
+        background: transparent;
+        color: var(--muted);
+        padding: 10px 14px;
+        border: 1px solid transparent;
+        font-weight: 700;
+      }
+
+      .tab-button.active {
+        background: rgba(92,110,248,0.12);
+        color: var(--primary-strong);
+        border-color: rgba(92,110,248,0.2);
+      }
+
+      .settings-button {
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .content {
+        padding-top: 24px;
+      }
+
+      .auth-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 22px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .card h2 {
+        margin-top: 0;
+        margin-bottom: 18px;
+      }
+
+      .form-row {
+        margin-bottom: 14px;
+      }
+
+      .form-row label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .status {
+        min-height: 22px;
+        display: none;
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-weight: 700;
+      }
+
+      .status.show {
+        display: block;
+      }
+
+      .status.success {
+        background: var(--success-bg);
+        color: var(--success);
+      }
+
+      .status.error {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .welcome-banner {
+        background: linear-gradient(135deg, rgba(92,110,248,0.12), rgba(110,231,200,0.15));
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px 20px;
+        margin-bottom: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .welcome-banner h2 {
+        margin: 0;
+      }
+
+      .empty-state {
+        border: 1px dashed var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        background: rgba(92,110,248,0.03);
+        color: var(--muted);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 22px;
+        margin-top: 22px;
+      }
+
+      .post-card, .chat-card, .leaderboard-card, .quest-card, .ecash-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 8px 24px rgba(23,35,55,0.06);
+      }
+
+      .post-card {
+        margin-bottom: 16px;
+      }
+
+      .post-header, .row-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        object-fit: cover;
+        border: 1px solid var(--border);
+      }
+
+      .mini-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        object-fit: cover;
+        vertical-align: middle;
+        border: 1px solid var(--border);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(92,110,248,0.12);
+        color: var(--primary-strong);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .comment-list {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .comment-item {
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+      }
+
+      .tab-section {
+        display: none;
+      }
+
+      .tab-section.active {
+        display: block;
+      }
+
+      .chat-surface {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .chat-message-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .message {
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(92,110,248,0.05);
+        border: 1px solid var(--border);
+      }
+
+      .message strong {
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .settings-panel {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        width: min(420px, calc(100vw - 24px));
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+        z-index: 20;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .profile-preview {
+        width: 90px;
+        height: 90px;
+        border-radius: 18px;
+        object-fit: cover;
+        border: 1px solid var(--border);
+        background: rgba(92,110,248,0.08);
+      }
+
+      .inline {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .hidden-root {
+        overflow: hidden;
+      }
+
+      @media (max-width: 760px) {
+        .topbar-inner {
+          align-items: flex-start;
+        }
+
+        .tabs {
+          width: 100%;
+        }
+
+        .tab-button {
+          flex: 1 1 calc(50% - 8px);
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body class="light">
+    <div class="shell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">
+            <div class="brand-badge">A</div>
+            <div>
+              <small>social</small>
+              <h1>Anagram</h1>
+            </div>
+          </div>
+
+          <nav class="tabs" id="tabsNav">
+            <button class="tab-button active" data-tab="leaderboard">Leaderboard</button>
+            <button class="tab-button" data-tab="feed">Community feed</button>
+            <button class="tab-button" data-tab="chats">Chats</button>
+            <button class="tab-button" data-tab="ecash">E-cash</button>
+            <button class="tab-button" data-tab="quests">Quests</button>
+          </nav>
+
+          <div class="topbar-right">
+            <div class="ecash-pill">E-cash: --</div>
+            <button class="settings-button" id="toggleSettings">Settings</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="authView">
+          <div class="auth-grid">
+            <div class="card">
+              <h2>Create account</h2>
+              <form id="createAccountForm">
+                <div class="form-row">
+                  <label for="username">Username</label>
+                  <input id="username" name="username" type="text" placeholder="Choose a username" required />
+                </div>
+                <div class="form-row">
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" placeholder="you@example.com" required />
+                </div>
+                <div class="form-row">
+                  <label for="password">Password</label>
+                  <input id="password" name="password" type="password" placeholder="Create a password" required />
+                </div>
+                <div class="form-row">
+                  <label for="referralCode">Referral code (optional)</label>
+                  <input id="referralCode" name="referralCode" type="text" placeholder="Referral code" />
+                </div>
+                <button type="submit">Create account</button>
+                <div id="createAccountStatus" class="status"></div>
+              </form>
+            </div>
+
+            <div class="card">
+              <h2>Login</h2>
+              <form id="loginForm">
+                <div class="form-row">
+                  <label for="loginIdentifier">Email or Username</label>
+                  <input id="loginIdentifier" type="text" placeholder="Email or username" required />
+                </div>
+                <div class="form-row">
+                  <label for="loginPassword">Password</label>
+                  <input id="loginPassword" type="password" placeholder="Password" required />
+                </div>
+                <button type="submit">Login</button>
+                <div id="loginStatus" class="status"></div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="appView" class="hidden">
+          <div class="welcome-banner">
+            <h2 id="welcomeText">Welcome back</h2>
+            <div class="pill" id="statusPill">Active user</div>
+          </div>
+
+          <section id="leaderboardTab" class="tab-section active">
+            <div class="card">
+              <h2>Leaderboard</h2>
+              <div id="leaderboardList"></div>
+            </div>
+          </section>
+
+          <section id="feedTab" class="tab-section">
+            <div class="card">
+              <h2>Share an update</h2>
+              <form id="postForm">
+                <div class="form-row">
+                  <textarea id="postText" placeholder="What would you like to share?" required></textarea>
+                </div>
+                <button type="submit">Post</button>
+                <div id="postStatus" class="status"></div>
+              </form>
+            </div>
+            <div id="postsList" style="margin-top:18px;"></div>
+          </section>
+
+          <section id="chatsTab" class="tab-section">
+            <div class="card">
+              <h2>Start a chat</h2>
+              <form id="chatForm">
+                <div class="form-row">
+                  <label for="chatType">Chat type</label>
+                  <select id="chatType">
+                    <option value="dm">Direct message</option>
+                    <option value="group">Group chat</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="chatName">Group name</label>
+                  <input id="chatName" type="text" placeholder="Optional for groups" />
+                </div>
+                <div class="form-row">
+                  <label for="chatParticipants">Participants</label>
+                  <input id="chatParticipants" type="text" placeholder="Comma-separated accounts" />
+                </div>
+                <button type="submit">Create chat</button>
+                <div id="chatStatus" class="status"></div>
+              </form>
+            </div>
+            <div id="chatsList" style="margin-top:18px;"></div>
+          </section>
+
+          <section id="ecashTab" class="tab-section">
+            <div class="grid-2">
+              <div class="ecash-card">
+                <h2>Your balance</h2>
+                <p class="muted">This is private and only visible to you.</p>
+                <div class="pill" id="privateBalancePill">E-cash: --</div>
+              </div>
+
+              <div class="ecash-card">
+                <h2>Send e-cash</h2>
+                <form id="transferForm">
+                  <div class="form-row">
+                    <label for="transferTo">Recipient</label>
+                    <select id="transferTo"></select>
+                  </div>
+                  <div class="form-row">
+                    <label for="transferAmount">Amount</label>
+                    <input id="transferAmount" type="number" min="1" step="1" value="1" required />
+                  </div>
+                  <button type="submit">Send</button>
+                  <div id="transferStatus" class="status"></div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <section id="questsTab" class="tab-section">
+            <div class="grid-2">
+              <div class="quest-card">
+                <h2>Daily quests</h2>
+                <div id="questsList"></div>
+              </div>
+
+              <div class="quest-card">
+                <h2>Referral code</h2>
+                <div class="pill" id="referralCodePill">--</div>
+                <p class="muted">Share your referral code to earn extra e-cash.</p>
+                <div class="muted" id="dailyResetTimer" style="margin-top:12px; font-weight:700;">Daily reset in --:--:--</div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <aside id="settingsPanel" class="settings-panel hidden">
+      <div class="panel-header">
+        <h2>Settings</h2>
+        <button class="secondary" id="closeSettings">Close</button>
+      </div>
+
+      <div class="settings-form">
+        <div>
+          <div style="margin-bottom:10px;">
+            <img id="settingsAvatarPreview" class="profile-preview" alt="Profile preview" />
+          </div>
+          <label for="profilePictureUpload">Upload profile picture</label>
+          <input id="profilePictureUpload" type="file" accept="image/*" />
+        </div>
+
+        <div class="form-row">
+          <label for="settingsTheme">Theme</label>
+          <select id="settingsTheme">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="high-contrast">High Contrast</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="settingsDescription">Profile description</label>
+          <textarea id="settingsDescription" placeholder="Tell people a little about yourself"></textarea>
+        </div>
+
+        <button id="saveProfileButton">Save profile</button>
+        <div id="settingsStatus" class="status"></div>
+
+        <div class="card" style="padding:16px;">
+          <h3 style="margin-top:0;">Add friend</h3>
+          <div class="form-row">
+            <label for="friendSelect">Choose someone to add</label>
+            <select id="friendSelect"></select>
+          </div>
+          <button class="secondary" id="addFriendButton">Add friend</button>
+          <div id="friendStatus" class="status"></div>
+        </div>
+
+        <div id="adminToolsCard" class="card hidden" style="padding:16px;">
+          <h3 style="margin-top:0;">Admin tools</h3>
+          <div class="form-row">
+            <label for="adminAccountSelect">Choose account</label>
+            <select id="adminAccountSelect"></select>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="secondary" id="toggleBanButton">Ban / Unban</button>
+            <button class="secondary" id="deleteAccountButton">Delete account</button>
+          </div>
+          <div id="adminStatus" class="status"></div>
+        </div>
+      </div>
+    </aside>
+
+    <script>
+      const state = {
+        accounts: [],
+        posts: [],
+        chats: [],
+        leaderboard: [],
+        currentAccountId: null,
+        currentAccount: null,
+        activeTab: 'leaderboard',
+        pendingProfilePicture: '',
+        dailyResetInterval: null
+      };
+
+      const els = {
+        authView: document.getElementById('authView'),
+        appView: document.getElementById('appView'),
+        settingsPanel: document.getElementById('settingsPanel'),
+        createAccountForm: document.getElementById('createAccountForm'),
+        createAccountStatus: document.getElementById('createAccountStatus'),
+        loginForm: document.getElementById('loginForm'),
+        loginStatus: document.getElementById('loginStatus'),
+        loginIdentifier: document.getElementById('loginIdentifier'),
+        welcomeText: document.getElementById('welcomeText'),
+        statusPill: document.getElementById('statusPill'),
+        leaderboardList: document.getElementById('leaderboardList'),
+        postsList: document.getElementById('postsList'),
+        chatsList: document.getElementById('chatsList'),
+        questsList: document.getElementById('questsList'),
+        referralCodePill: document.getElementById('referralCodePill'),
+        privateBalancePill: document.getElementById('privateBalancePill'),
+        transferTo: document.getElementById('transferTo'),
+        transferForm: document.getElementById('transferForm'),
+        transferStatus: document.getElementById('transferStatus'),
+        transferAmount: document.getElementById('transferAmount'),
+        settingsTheme: document.getElementById('settingsTheme'),
+        settingsDescription: document.getElementById('settingsDescription'),
+        settingsStatus: document.getElementById('settingsStatus'),
+        profilePictureUpload: document.getElementById('profilePictureUpload'),
+        settingsAvatarPreview: document.getElementById('settingsAvatarPreview'),
+        friendSelect: document.getElementById('friendSelect'),
+        friendStatus: document.getElementById('friendStatus'),
+        friendInviteInput: document.getElementById('friendInviteInput'),
+        inviteStatus: document.getElementById('inviteStatus'),
+        adminToolsCard: document.getElementById('adminToolsCard'),
+        adminAccountSelect: document.getElementById('adminAccountSelect'),
+        adminStatus: document.getElementById('adminStatus'),
+        toggleBanButton: document.getElementById('toggleBanButton'),
+        deleteAccountButton: document.getElementById('deleteAccountButton'),
+        tabsNav: document.getElementById('tabsNav'),
+        themeSelector: document.getElementById('settingsTheme')
+      };
+
+      document.addEventListener('DOMContentLoaded', init);
+
+      function init() {
+        bindEvents();
+        const savedTheme = localStorage.getItem('anagram-theme') || 'light';
+        setTheme(savedTheme);
+        renderEmptyStates();
+        renderDailyResetCountdown();
+      }
+
+      function bindEvents() {
+        els.createAccountForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            const result = await api('/api/accounts', {
+              method: 'POST',
+              body: JSON.stringify({
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                referralCode: document.getElementById('referralCode').value
+              })
+            });
+            showStatus(els.createAccountStatus, 'success', 'Account created successfully. You can log in now.');
+            els.createAccountForm.reset();
+            document.getElementById('loginIdentifier').value = document.getElementById('email').value;
+          } catch (error) {
+            showStatus(els.createAccountStatus, 'error', error.message);
+          }
+        });
+
+        els.loginForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            const result = await api('/api/login', {
+              method: 'POST',
+              body: JSON.stringify({
+                identifier: document.getElementById('loginIdentifier').value,
+                password: document.getElementById('loginPassword').value
+              })
+            });
+            state.currentAccountId = result.account.id;
+            state.currentAccount = result.account;
+            els.authView.classList.add('hidden');
+            els.appView.classList.remove('hidden');
+            setTheme(result.account.theme || 'light');
+            await loadData();
+            showStatus(els.loginStatus, 'success', 'Logged in successfully.');
+          } catch (error) {
+            showStatus(els.loginStatus, 'error', error.message);
+          }
+        });
+
+        els.tabsNav.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-tab]');
+          if (!button) return;
+          state.activeTab = button.dataset.tab;
+          renderTabs();
+        });
+
+        document.getElementById('toggleSettings').addEventListener('click', () => {
+          els.settingsPanel.classList.toggle('hidden');
+          document.body.classList.toggle('hidden-root', !els.settingsPanel.classList.contains('hidden'));
+          if (!els.settingsPanel.classList.contains('hidden')) {
+            populateSettings();
+          }
+        });
+
+        document.addEventListener('contextmenu', async (event) => {
+          const clickable = event.target.closest('[data-account-id]');
+          if (!clickable || !state.currentAccount || !state.currentAccount.isAdmin) {
+            return;
+          }
+
+          const targetId = clickable.dataset.accountId;
+          if (!targetId || targetId === state.currentAccountId) {
+            return;
+          }
+
+          event.preventDefault();
+
+          const target = state.accounts.find((account) => account.id === targetId);
+          if (!target) {
+            return;
+          }
+
+          const action = target.isBanned ? 'unban' : 'ban';
+          const shouldProceed = window.confirm(`Ban ${target.username}?`);
+          if (!shouldProceed) {
+            return;
+          }
+
+          try {
+            const result = await api('/api/admin/ban', {
+              method: 'POST',
+              body: JSON.stringify({
+                requesterId: state.currentAccountId,
+                accountId: targetId,
+                banned: !target.isBanned
+              })
+            });
+
+            showStatus(els.adminStatus, 'success', result.account.isBanned ? 'Account banned.' : 'Account unbanned.');
+            await loadData();
+            populateSettings();
+          } catch (error) {
+            showStatus(els.adminStatus, 'error', error.message);
+          }
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+          els.settingsPanel.classList.add('hidden');
+          document.body.classList.remove('hidden-root');
+        });
+
+        els.profilePictureUpload.addEventListener('change', async (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = () => {
+            state.pendingProfilePicture = String(reader.result || '');
+            els.settingsAvatarPreview.src = state.pendingProfilePicture || (state.currentAccount?.profilePicture || '');
+          };
+          reader.readAsDataURL(file);
+        });
+
+        document.getElementById('saveProfileButton').addEventListener('click', async () => {
+          if (!state.currentAccountId) return;
+          try {
+            const nextProfilePicture = state.pendingProfilePicture || state.currentAccount.profilePicture || '';
+            const result = await api('/api/accounts/' + state.currentAccountId, {
+              method: 'PUT',
+              body: JSON.stringify({
+                profilePicture: nextProfilePicture,
+                profileDescription: els.settingsDescription.value,
+                theme: els.settingsTheme.value
+              })
+            });
+            state.currentAccount = result.account;
+            state.pendingProfilePicture = '';
+            setTheme(result.account.theme || 'light');
+            populateSettings();
+            showStatus(els.settingsStatus, 'success', 'Profile updated.');
+            await loadData();
+          } catch (error) {
+            showStatus(els.settingsStatus, 'error', error.message);
+          }
+        });
+
+        document.getElementById('addFriendButton').addEventListener('click', async () => {
+          if (!state.currentAccountId || !els.friendSelect.value) {
+            showStatus(els.friendStatus, 'error', 'Choose a friend to add.');
+            return;
+          }
+
+          try {
+            await api('/api/friends', {
+              method: 'POST',
+              body: JSON.stringify({
+                accountId: state.currentAccountId,
+                friendId: els.friendSelect.value
+              })
+            });
+            showStatus(els.friendStatus, 'success', 'Friend added.');
+            await loadData();
+            populateSettings();
+          } catch (error) {
+            showStatus(els.friendStatus, 'error', error.message);
+          }
+        });
+
+        document.getElementById('copyInviteButton').addEventListener('click', async () => {
+          if (!state.currentAccount) {
+            showStatus(els.inviteStatus, 'error', 'Log in to share your invite code.');
+            return;
+          }
+
+          const code = state.currentAccount.referralCode || 'No referral code';
+          els.friendInviteInput.value = code;
+          try {
+            await navigator.clipboard.writeText(code);
+            showStatus(els.inviteStatus, 'success', 'Invite code copied to clipboard.');
+          } catch (error) {
+            showStatus(els.inviteStatus, 'error', 'Unable to copy automatically. You can copy the code manually.');
+          }
+        });
+
+        els.toggleBanButton.addEventListener('click', async () => {
+          if (!state.currentAccountId || !els.adminAccountSelect.value) {
+            showStatus(els.adminStatus, 'error', 'Choose an account to manage.');
+            return;
+          }
+
+          try {
+            const target = state.accounts.find((account) => account.id === els.adminAccountSelect.value);
+            if (!target) {
+              throw new Error('Account not found.');
+            }
+
+            const result = await api('/api/admin/ban', {
+              method: 'POST',
+              body: JSON.stringify({
+                requesterId: state.currentAccountId,
+                accountId: target.id,
+                banned: !target.isBanned
+              })
+            });
+
+            showStatus(els.adminStatus, 'success', result.account.isBanned ? 'Account banned.' : 'Account unbanned.');
+            await loadData();
+            populateSettings();
+          } catch (error) {
+            showStatus(els.adminStatus, 'error', error.message);
+          }
+        });
+
+        els.deleteAccountButton.addEventListener('click', async () => {
+          if (!state.currentAccountId || !els.adminAccountSelect.value) {
+            showStatus(els.adminStatus, 'error', 'Choose an account to delete.');
+            return;
+          }
+
+          try {
+            const target = state.accounts.find((account) => account.id === els.adminAccountSelect.value);
+            if (!target) {
+              throw new Error('Account not found.');
+            }
+
+            await api('/api/admin/delete', {
+              method: 'POST',
+              body: JSON.stringify({
+                requesterId: state.currentAccountId,
+                accountId: target.id
+              })
+            });
+
+            showStatus(els.adminStatus, 'success', 'Account deleted.');
+            await loadData();
+            populateSettings();
+          } catch (error) {
+            showStatus(els.adminStatus, 'error', error.message);
+          }
+        });
+
+        document.getElementById('postForm').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await api('/api/posts', {
+              method: 'POST',
+              body: JSON.stringify({
+                accountId: state.currentAccountId,
+                text: document.getElementById('postText').value
+              })
+            });
+            showStatus(document.getElementById('postStatus'), 'success', 'Post shared.');
+            document.getElementById('postText').value = '';
+            await loadData();
+          } catch (error) {
+            showStatus(document.getElementById('postStatus'), 'error', error.message);
+          }
+        });
+
+        document.getElementById('transferForm').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await api('/api/transfers', {
+              method: 'POST',
+              body: JSON.stringify({
+                senderId: state.currentAccountId,
+                recipientId: els.transferTo.value,
+                amount: Number(els.transferAmount.value)
+              })
+            });
+            showStatus(els.transferStatus, 'success', 'Transfer complete.');
+            els.transferAmount.value = '1';
+            await loadData();
+          } catch (error) {
+            showStatus(els.transferStatus, 'error', error.message);
+          }
+        });
+
+        document.getElementById('chatForm').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            const participantsText = document.getElementById('chatParticipants').value;
+            const participants = participantsText
+              .split(',')
+              .map((value) => value.trim())
+              .filter(Boolean);
+
+            await api('/api/chats', {
+              method: 'POST',
+              body: JSON.stringify({
+                accountId: state.currentAccountId,
+                type: document.getElementById('chatType').value,
+                name: document.getElementById('chatName').value,
+                participants
+              })
+            });
+            showStatus(document.getElementById('chatStatus'), 'success', 'Chat created.');
+            document.getElementById('chatForm').reset();
+            await loadData();
+          } catch (error) {
+            showStatus(document.getElementById('chatStatus'), 'error', error.message);
+          }
+        });
+      }
+
+      async function loadData() {
+        if (!state.currentAccountId) {
+          return;
+        }
+
+        const [accountsResult, postsResult, chatsResult, leaderboardResult] = await Promise.all([
+          api('/api/accounts'),
+          api('/api/posts'),
+          api('/api/chats'),
+          api('/api/leaderboard')
+        ]);
+
+        state.accounts = accountsResult.accounts || [];
+        state.posts = postsResult.posts || [];
+        state.chats = chatsResult.chats || [];
+        state.leaderboard = leaderboardResult.leaderboard || [];
+        state.currentAccount = state.accounts.find((account) => account.id === state.currentAccountId) || state.currentAccount;
+
+        renderWelcome();
+        renderLeaderboard();
+        renderPosts();
+        renderChats();
+        renderQuests();
+        renderEcash();
+        populateSettings();
+        renderDailyResetCountdown();
+      }
+
+      function renderTabs() {
+        document.querySelectorAll('.tab-button').forEach((button) => {
+          const isActive = button.dataset.tab === state.activeTab;
+          button.classList.toggle('active', isActive);
+        });
+
+        document.querySelectorAll('.tab-section').forEach((section) => {
+          section.classList.toggle('active', section.id === state.activeTab + 'Tab');
+        });
+      }
+
+      function renderWelcome() {
+        if (!state.currentAccount) return;
+        els.welcomeText.textContent = 'Welcome back, ' + state.currentAccount.username + '!';
+        els.statusPill.textContent = state.currentAccount.isAdmin ? 'Admin account' : 'Active user';
+        els.referralCodePill.textContent = state.currentAccount.referralCode || 'No referral code';
+        els.friendInviteInput.value = state.currentAccount.referralCode || 'No referral code';
+        els.privateBalancePill.textContent = 'E-cash: ' + (state.currentAccount.eCash ?? 0);
+        document.querySelector('.ecash-pill').textContent = 'E-cash: --';
+      }
+
+      function renderLeaderboard() {
+        const leaderboard = state.leaderboard || [];
+
+        if (!leaderboard.length) {
+          els.leaderboardList.innerHTML = '<div class="empty-state">No leaderboard data yet.</div>';
+          return;
+        }
+
+        els.leaderboardList.innerHTML = leaderboard.map((account, index) => {
+          const profilePicture = account.profilePicture || '';
+          return `
+            <div class="leaderboard-card" data-account-id="${account.id}" style="margin-bottom:12px;">
+              <div class="row-between">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <img class="mini-avatar" src="${escapeAttribute(profilePicture) || 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23656f8d%22/%3E%3C/svg%3E'}" alt="Avatar" />
+                  <div>
+                    <strong class="username-clickable" data-account-id="${account.id}">#${index + 1} ${escapeHtml(account.username)}</strong>
+                    <div class="muted">${account.eCash ?? 0} e-cash</div>
+                    <div class="muted">${account.friends?.length || 0} friends</div>
+                  </div>
+                </div>
+                <span class="pill">Rank ${index + 1}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderPosts() {
+        if (!state.posts.length) {
+          els.postsList.innerHTML = '<div class="empty-state">No posts yet. Be the first to share something.</div>';
+          return;
+        }
+
+        els.postsList.innerHTML = state.posts.map((post) => {
+          const author = state.accounts.find((account) => account.id === post.accountId) || { username: 'Unknown' };
+          const comments = (post.comments || []).map((comment) => {
+            const commenter = state.accounts.find((account) => account.id === comment.accountId) || { username: 'Unknown' };
+            return `
+              <div class="comment-item">
+                <strong>${escapeHtml(commenter.username)}:</strong> ${escapeHtml(comment.text)}
+              </div>
+            `;
+          }).join('');
+
+          return `
+            <div class="post-card">
+              <div class="post-header">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <img class="avatar" src="${escapeAttribute(author.profilePicture || '') || 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23656f8d%22/%3E%3C/svg%3E'}" alt="Avatar" />
+                  <div>
+                    <strong class="username-clickable" data-account-id="${author.id}">${escapeHtml(author.username)}</strong>
+                    <div class="muted">${new Date(post.createdAt).toLocaleString()}</div>
+                  </div>
+                </div>
+                <div class="pill">+${post.questAward || 0} e-cash</div>
+              </div>
+              <p>${escapeHtml(post.text)}</p>
+              <div class="comment-list">
+                ${comments || '<div class="muted">No comments yet.</div>'}
+              </div>
+              <form class="comment-form" data-post-id="${post.id}" style="margin-top:12px;">
+                <div class="inline" style="align-items:center;">
+                  <input type="text" name="commentText" placeholder="Add a comment" required />
+                  <button type="submit" class="secondary">Comment</button>
+                </div>
+              </form>
+            </div>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.comment-form').forEach((form) => {
+          form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const postId = form.dataset.postId;
+            const input = form.querySelector('input[name="commentText"]');
+            try {
+              await api('/api/posts/' + postId + '/comments', {
+                method: 'POST',
+                body: JSON.stringify({ accountId: state.currentAccountId, text: input.value })
+              });
+              input.value = '';
+              await loadData();
+            } catch (error) {
+              alert(error.message);
+            }
+          });
+        });
+      }
+
+      function renderChats() {
+        if (!state.chats.length) {
+          els.chatsList.innerHTML = '<div class="empty-state">No chats yet. Start one from the Chats tab.</div>';
+          return;
+        }
+
+        els.chatsList.innerHTML = state.chats.map((chat) => {
+          const messages = (chat.messages || []).map((message) => {
+            const sender = state.accounts.find((account) => account.id === message.accountId) || { username: 'Unknown' };
+            return `
+              <div class="message">
+                <strong class="username-clickable" data-account-id="${sender.id}">${escapeHtml(sender.username)}:</strong> ${escapeHtml(message.text)}
+              </div>
+            `;
+          }).join('');
+
+          return `
+            <div class="chat-card" style="margin-bottom:18px;">
+              <div class="row-between">
+                <div>
+                  <h3 style="margin:0;">${escapeHtml(chat.name || 'Chat')}</h3>
+                  <div class="muted">${escapeHtml(chat.type)}</div>
+                </div>
+              </div>
+              <div class="chat-message-list">
+                ${messages || '<div class="muted">No messages yet.</div>'}
+              </div>
+              <form class="chat-message-form" data-chat-id="${chat.id}" style="margin-top:12px;">
+                <div class="inline" style="align-items:center;">
+                  <input type="text" name="messageText" placeholder="Send a message" required />
+                  <button type="submit" class="secondary">Send</button>
+                </div>
+              </form>
+            </div>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.chat-message-form').forEach((form) => {
+          form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const chatId = form.dataset.chatId;
+            const input = form.querySelector('input[name="messageText"]');
+            try {
+              await api('/api/chats/' + chatId + '/messages', {
+                method: 'POST',
+                body: JSON.stringify({ accountId: state.currentAccountId, text: input.value })
+              });
+              input.value = '';
+              await loadData();
+            } catch (error) {
+              alert(error.message);
+            }
+          });
+        });
+      }
+
+      function renderQuests() {
+        const current = state.currentAccount;
+        const daily = current?.daily || { total: 0, posts: 0, referrals: 0, friends: 0 };
+
+        const questCards = [
+          { label: 'Daily posts', value: daily.posts || 0, target: 3, note: 'Earn 20 e-cash per post' },
+          { label: 'Daily referrals', value: daily.referrals || 0, target: 1, note: 'Earn 40 e-cash per referral' },
+          { label: 'Daily friend adds', value: daily.friends || 0, target: 1, note: 'Earn 20 e-cash for adding a friend' },
+          { label: 'Current daily total', value: daily.total || 0, target: 100, note: 'Earn up to 100 e-cash each day' }
+        ];
+
+        els.questsList.innerHTML = questCards.map((quest) => `
+          <div class="quest-card" style="margin-bottom:12px; padding:14px;">
+            <div class="row-between">
+              <strong>${quest.label}</strong>
+              <span class="pill">${quest.value}/${quest.target}</span>
+            </div>
+            <div class="muted" style="margin-top:8px;">${quest.note}</div>
+          </div>
+        `).join('');
+      }
+
+      function renderEcash() {
+        const current = state.currentAccount;
+        if (!current) return;
+        els.privateBalancePill.textContent = 'E-cash: ' + (current.eCash ?? 0);
+
+        els.transferTo.innerHTML = state.accounts
+          .filter((account) => account.id !== current.id)
+          .map((account) => `<option value="${account.id}">${escapeHtml(account.username)}</option>`)
+          .join('');
+      }
+
+      function populateSettings() {
+        if (!state.currentAccount) return;
+        els.settingsTheme.value = state.currentAccount.theme || 'light';
+        els.settingsDescription.value = state.currentAccount.profileDescription || '';
+        els.settingsAvatarPreview.src = state.currentAccount.profilePicture || '';
+        els.friendSelect.innerHTML = state.accounts
+          .filter((account) => account.id !== state.currentAccountId)
+          .map((account) => `<option value="${account.id}">${escapeHtml(account.username)}</option>`)
+          .join('');
+
+        els.adminToolsCard.classList.toggle('hidden', !state.currentAccount.isAdmin);
+        els.adminAccountSelect.innerHTML = state.accounts
+          .filter((account) => !account.isAdmin && account.id !== state.currentAccountId)
+          .map((account) => `<option value="${account.id}">${escapeHtml(account.username)}${account.isBanned ? ' (banned)' : ''}</option>`)
+          .join('');
+      }
+
+      function setTheme(themeName) {
+        const safeTheme = ['light', 'dark', 'high-contrast'].includes(themeName) ? themeName : 'light';
+        document.body.className = safeTheme;
+        document.getElementById('settingsTheme').value = safeTheme;
+        localStorage.setItem('anagram-theme', safeTheme);
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { 'Content-Type': 'application/json' },
+          ...options
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Request failed');
+        }
+
+        return data;
+      }
+
+      function showStatus(element, type, message) {
+        element.textContent = message;
+        element.className = 'status show ' + type;
+      }
+
+      function renderEmptyStates() {
+        els.leaderboardList.innerHTML = '<div class="empty-state">Log in to view the leaderboard.</div>';
+        els.postsList.innerHTML = '<div class="empty-state">Log in to view the community feed.</div>';
+        els.chatsList.innerHTML = '<div class="empty-state">Log in to view your chats.</div>';
+        els.questsList.innerHTML = '<div class="empty-state">Log in to view your quests.</div>';
+        els.friendInviteInput.value = '';
+      }
+
+      function renderDailyResetCountdown() {
+        const timer = document.getElementById('dailyResetTimer');
+        if (!timer) return;
+
+        const nextRefresh = new Date();
+        nextRefresh.setHours(17, 0, 0, 0);
+
+        if (nextRefresh <= new Date()) {
+          nextRefresh.setDate(nextRefresh.getDate() + 1);
+        }
+
+        const update = () => {
+          const now = new Date();
+          const diff = Math.max(0, nextRefresh.getTime() - now.getTime());
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          timer.textContent = `Daily reset in ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        };
+
+        if (state.dailyResetInterval) {
+          clearInterval(state.dailyResetInterval);
+        }
+
+        update();
+        state.dailyResetInterval = setInterval(update, 1000);
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function escapeAttribute(value) {
+        return String(value || '').replace(/"/g, '&quot;');
+      }
+    </script>
+  </body>
+</html>
