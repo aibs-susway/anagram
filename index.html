@@ -1102,7 +1102,7 @@
           } catch (error) { showStatus(els.gameRoomStatus, 'error', error.message); }
         });
 
-        els.stocksList.addEventListener('click', async (event) => {
+        document.addEventListener('click', async (event) => {
           const action = event.target.closest('[data-stock-side]');
           if (!action) return;
           const card = action.closest('.marketplace-card');
@@ -1498,7 +1498,7 @@
           const visibleColumns = Math.min(13, row * 2 + 1);
           const firstColumn = Math.floor((13 - visibleColumns) / 2);
           for (let column = firstColumn; column < firstColumn + visibleColumns; column += 1) {
-            const x = 7.7 + column * 7.7;
+            const x = 3.85 + column * 7.69;
             const y = 5 + row * 7.2;
             pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
           }
