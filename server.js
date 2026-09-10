@@ -10,6 +10,8 @@ const POST_REWARD = 20;
 const MESSAGE_REWARD = 10;
 const REFERRAL_REWARD = 40;
 const FRIEND_REWARD = 20;
+const MIN_AUCTION_SECONDS = 15;
+const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const ADMIN_USERNAME = 'despawn';
 const ADMIN_PASSWORD = 'TalkingRian';
 
@@ -22,7 +24,8 @@ function ensureDataFile() {
           accounts: [],
           posts: [],
           chats: [],
-          transfers: []
+          transfers: [],
+          marketplace: []
         },
         null,
         2
@@ -49,7 +52,8 @@ function getDefaultStore() {
     accounts: [],
     posts: [],
     chats: [],
-    transfers: []
+    transfers: [],
+    marketplace: []
   };
 }
 
@@ -118,6 +122,7 @@ function loadStore() {
   normalized.posts = Array.isArray(store.posts) ? store.posts : [];
   normalized.chats = Array.isArray(store.chats) ? store.chats : [];
   normalized.transfers = Array.isArray(store.transfers) ? store.transfers : [];
+  normalized.marketplace = Array.isArray(store.marketplace) ? store.marketplace : [];
 
   normalized.accounts = normalized.accounts.map((account) => ({
     ...account,
@@ -138,6 +143,154 @@ function loadStore() {
 
 function saveStore(store) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2));
+}
+
+function findMarketplaceItem(store, itemId) {
+  return store.marketplace.find((item) => item.id === itemId);
+}
+
+function serializeMarketplace(store, item) {
+  const seller = findAccount(store, item.sellerId);
+  const highestBidder = item.highestBidderId ? findAccount(store, item.highestBidderId) : null;
+  return {
+    ...item,
+    sellerUsername: seller ? seller.username : 'Unknown seller',
+    highestBidderUsername: highestBidder ? highestBidder.username : ''
+  };
+}
+
+function settleAuctions(store) {
+  const now = Date.now();
+  let changed = false;
+
+  store.marketplace.forEach((item) => {
+    if (item.type !== 'auction' || item.status !== 'active' || new Date(item.endsAt).getTime() > now) {
+      return;
+    }
+
+    const winner = item.highestBidderId ? findAccount(store, item.highestBidderId) : null;
+    const seller = findAccount(store, item.sellerId);
+
+    if (winner && seller && Number(winner.eCash || 0) >= Number(item.currentPrice || 0)) {
+      winner.eCash = Number(winner.eCash || 0) - Number(item.currentPrice || 0);
+      seller.eCash = Number(seller.eCash || 0) + Number(item.currentPrice || 0);
+      item.status = 'sold';
+      item.buyerId = winner.id;
+      item.soldAt = new Date().toISOString();
+    } else {
+      item.status = 'ended';
+    }
+
+    changed = true;
+  });
+
+  return changed;
+}
+
+function createMarketplaceItem(store, input) {
+  const seller = findAccount(store, input.sellerId);
+  if (!seller || seller.isBanned) {
+    throw new Error('Seller account not found or banned.');
+  }
+
+  const type = input.type === 'auction' ? 'auction' : 'shop';
+  const title = normalizeText(input.title);
+  const description = normalizeText(input.description);
+  const price = Number(input.price);
+
+  if (!title) {
+    throw new Error('Offer title is required.');
+  }
+
+  if (!Number.isInteger(price) || price <= 0) {
+    throw new Error('Price must be a positive whole number.');
+  }
+
+  const item = {
+    id: randomBytes(8).toString('hex'),
+    sellerId: seller.id,
+    type,
+    title,
+    description,
+    price,
+    startingPrice: price,
+    currentPrice: price,
+    highestBidderId: '',
+    buyerId: '',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    endsAt: ''
+  };
+
+  if (type === 'auction') {
+    const durationSeconds = Number(input.durationSeconds);
+    if (!Number.isInteger(durationSeconds) || durationSeconds < MIN_AUCTION_SECONDS || durationSeconds > MAX_AUCTION_SECONDS) {
+      throw new Error('Auction duration must be between 15 seconds and 2 weeks.');
+    }
+    item.endsAt = new Date(Date.now() + durationSeconds * 1000).toISOString();
+  }
+
+  store.marketplace.unshift(item);
+  return item;
+}
+
+function buyMarketplaceItem(store, buyerId, itemId) {
+  settleAuctions(store);
+  const buyer = findAccount(store, buyerId);
+  const item = findMarketplaceItem(store, itemId);
+
+  if (!buyer || buyer.isBanned || !item) {
+    throw new Error('Buyer or offer not found.');
+  }
+  if (item.sellerId === buyerId) {
+    throw new Error('You cannot buy your own offer.');
+  }
+  if (item.status !== 'active' || item.type !== 'shop') {
+    throw new Error('This shop offer is no longer available.');
+  }
+  if (!buyer.isAdmin && Number(buyer.eCash || 0) < item.price) {
+    throw new Error('Insufficient e-cash balance.');
+  }
+
+  if (!buyer.isAdmin) {
+    buyer.eCash = Number(buyer.eCash || 0) - item.price;
+  }
+  const seller = findAccount(store, item.sellerId);
+  if (seller && !seller.isAdmin) {
+    seller.eCash = Number(seller.eCash || 0) + item.price;
+  }
+  item.status = 'sold';
+  item.buyerId = buyer.id;
+  item.soldAt = new Date().toISOString();
+  return item;
+}
+
+function placeMarketplaceBid(store, bidderId, itemId, amount) {
+  settleAuctions(store);
+  const bidder = findAccount(store, bidderId);
+  const item = findMarketplaceItem(store, itemId);
+  const bid = Number(amount);
+
+  if (!bidder || bidder.isBanned || !item) {
+    throw new Error('Bidder or offer not found.');
+  }
+  if (item.sellerId === bidderId) {
+    throw new Error('You cannot bid on your own auction.');
+  }
+  if (item.type !== 'auction' || item.status !== 'active' || new Date(item.endsAt).getTime() <= Date.now()) {
+    throw new Error('This auction is no longer active.');
+  }
+  if (!Number.isInteger(bid) || bid <= Number(item.currentPrice || 0)) {
+    throw new Error('Bid must be higher than the current price.');
+  }
+  if (!bidder.isAdmin && Number(bidder.eCash || 0) < bid) {
+    throw new Error('Insufficient e-cash balance for this bid.');
+  }
+
+  item.currentPrice = bid;
+  item.price = bid;
+  item.highestBidderId = bidder.id;
+  return item;
 }
 
 function sendJson(res, statusCode, data) {
@@ -652,7 +805,20 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/chats') {
-    sendJson(res, 200, { chats: store.chats });
+    const accountId = url.searchParams.get('accountId');
+    const chats = accountId
+      ? store.chats.filter((chat) => (chat.participants || []).includes(accountId))
+      : store.chats;
+    sendJson(res, 200, { chats });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/marketplace') {
+    const changed = settleAuctions(store);
+    if (changed) {
+      saveStore(store);
+    }
+    sendJson(res, 200, { items: store.marketplace.map((item) => serializeMarketplace(store, item)) });
     return;
   }
 
@@ -785,6 +951,44 @@ const server = http.createServer(async (req, res) => {
       const chat = createChat(store, body.accountId, body);
       saveStore(store);
       sendJson(res, 201, { chat });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/marketplace') {
+    try {
+      const body = await readBody(req);
+      const item = createMarketplaceItem(store, body);
+      saveStore(store);
+      sendJson(res, 201, { item: serializeMarketplace(store, item) });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname.startsWith('/api/marketplace/') && url.pathname.endsWith('/buy')) {
+    try {
+      const itemId = url.pathname.split('/api/marketplace/')[1].split('/buy')[0];
+      const body = await readBody(req);
+      const item = buyMarketplaceItem(store, body.accountId, itemId);
+      saveStore(store);
+      sendJson(res, 200, { item: serializeMarketplace(store, item) });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname.startsWith('/api/marketplace/') && url.pathname.endsWith('/bid')) {
+    try {
+      const itemId = url.pathname.split('/api/marketplace/')[1].split('/bid')[0];
+      const body = await readBody(req);
+      const item = placeMarketplaceBid(store, body.accountId, itemId, body.amount);
+      saveStore(store);
+      sendJson(res, 200, { item: serializeMarketplace(store, item) });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }

@@ -417,6 +417,36 @@
         margin-right: 6px;
       }
 
+      .marketplace-subtabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+      }
+
+      .marketplace-subtab.active {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .marketplace-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .marketplace-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        background: var(--card);
+      }
+
+      .marketplace-card.sold,
+      .marketplace-card.ended {
+        opacity: 0.7;
+      }
+
       .settings-panel {
         position: fixed;
         top: 24px;
@@ -498,6 +528,7 @@
             <button class="tab-button" data-tab="chats">Chats</button>
             <button class="tab-button" data-tab="ecash">E-cash</button>
             <button class="tab-button" data-tab="quests">Quests</button>
+            <button class="tab-button" data-tab="shop">Shop</button>
           </nav>
 
           <div class="topbar-right">
@@ -651,6 +682,46 @@
               </div>
             </div>
           </section>
+
+          <section id="shopTab" class="tab-section">
+            <div class="card">
+              <h2>Marketplace</h2>
+              <div class="marketplace-subtabs" id="marketplaceSubtabs">
+                <button type="button" class="secondary marketplace-subtab active" data-market-tab="auction">Auction</button>
+                <button type="button" class="secondary marketplace-subtab" data-market-tab="shop">Shop</button>
+              </div>
+
+              <form id="marketplaceForm">
+                <div class="form-row">
+                  <label for="marketplaceType">Offer type</label>
+                  <select id="marketplaceType">
+                    <option value="auction">Auction</option>
+                    <option value="shop">Shop</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="marketplaceTitle">What are you offering?</label>
+                  <input id="marketplaceTitle" type="text" placeholder="Offer title" required />
+                </div>
+                <div class="form-row">
+                  <label for="marketplaceDescription">Description</label>
+                  <textarea id="marketplaceDescription" placeholder="Describe the offer"></textarea>
+                </div>
+                <div class="form-row">
+                  <label for="marketplacePrice">Starting price or shop price</label>
+                  <input id="marketplacePrice" type="number" min="1" step="1" required />
+                </div>
+                <div class="form-row" id="auctionDurationRow">
+                  <label for="auctionDuration">Auction duration in seconds</label>
+                  <input id="auctionDuration" type="number" min="15" max="1209600" value="60" required />
+                  <div class="muted">Choose any duration from 15 seconds to 1,209,600 seconds (2 weeks).</div>
+                </div>
+                <button type="submit">Create offer</button>
+                <div id="marketplaceStatus" class="status"></div>
+              </form>
+            </div>
+            <div id="marketplaceList" class="marketplace-list" style="margin-top:18px;"></div>
+          </section>
         </section>
       </main>
     </div>
@@ -718,11 +789,14 @@
         posts: [],
         chats: [],
         leaderboard: [],
+        marketplace: [],
         currentAccountId: null,
         currentAccount: null,
         activeTab: 'leaderboard',
+        activeMarketplaceTab: 'auction',
         pendingProfilePicture: '',
-        dailyResetInterval: null
+        dailyResetInterval: null,
+        chatRefreshInterval: null
       };
 
       const els = {
@@ -761,7 +835,17 @@
         toggleBanButton: document.getElementById('toggleBanButton'),
         deleteAccountButton: document.getElementById('deleteAccountButton'),
         tabsNav: document.getElementById('tabsNav'),
-        themeSelector: document.getElementById('settingsTheme')
+        themeSelector: document.getElementById('settingsTheme'),
+        marketplaceSubtabs: document.getElementById('marketplaceSubtabs'),
+        marketplaceForm: document.getElementById('marketplaceForm'),
+        marketplaceType: document.getElementById('marketplaceType'),
+        marketplaceTitle: document.getElementById('marketplaceTitle'),
+        marketplaceDescription: document.getElementById('marketplaceDescription'),
+        marketplacePrice: document.getElementById('marketplacePrice'),
+        auctionDurationRow: document.getElementById('auctionDurationRow'),
+        auctionDuration: document.getElementById('auctionDuration'),
+        marketplaceStatus: document.getElementById('marketplaceStatus'),
+        marketplaceList: document.getElementById('marketplaceList')
       };
 
       document.addEventListener('DOMContentLoaded', init);
@@ -772,6 +856,7 @@
         setTheme(savedTheme);
         renderEmptyStates();
         renderDailyResetCountdown();
+        restoreSession();
       }
 
       function bindEvents() {
@@ -807,12 +892,14 @@
             });
             state.currentAccountId = result.account.id;
             state.currentAccount = result.account;
+            localStorage.setItem('anagram-session', JSON.stringify(result.account));
             els.authView.classList.add('hidden');
             els.appView.classList.remove('hidden');
             setTheme(result.account.theme || 'light');
             renderWelcome();
             renderQuests();
             renderEcash();
+            startChatRefresh();
             await loadData();
             showStatus(els.loginStatus, 'success', 'Logged in successfully.');
           } catch (error) {
@@ -825,6 +912,69 @@
           if (!button) return;
           state.activeTab = button.dataset.tab;
           renderTabs();
+        });
+
+        els.marketplaceSubtabs.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-market-tab]');
+          if (!button) return;
+          state.activeMarketplaceTab = button.dataset.marketTab;
+          renderMarketplaceTabs();
+          renderMarketplace();
+        });
+
+        els.marketplaceType.addEventListener('change', () => {
+          els.auctionDurationRow.classList.toggle('hidden', els.marketplaceType.value !== 'auction');
+          els.auctionDuration.required = els.marketplaceType.value === 'auction';
+        });
+
+        els.marketplaceForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await api('/api/marketplace', {
+              method: 'POST',
+              body: JSON.stringify({
+                sellerId: state.currentAccountId,
+                type: els.marketplaceType.value,
+                title: els.marketplaceTitle.value,
+                description: els.marketplaceDescription.value,
+                price: Number(els.marketplacePrice.value),
+                durationSeconds: Number(els.auctionDuration.value)
+              })
+            });
+            showStatus(els.marketplaceStatus, 'success', 'Offer created.');
+            els.marketplaceForm.reset();
+            els.marketplaceType.value = 'auction';
+            els.auctionDurationRow.classList.remove('hidden');
+            els.auctionDuration.required = true;
+            await loadData();
+          } catch (error) {
+            showStatus(els.marketplaceStatus, 'error', error.message);
+          }
+        });
+
+        els.marketplaceList.addEventListener('click', async (event) => {
+          const action = event.target.closest('[data-market-action]');
+          if (!action) return;
+          const itemId = action.dataset.itemId;
+          try {
+            if (action.dataset.marketAction === 'buy') {
+              await api('/api/marketplace/' + itemId + '/buy', {
+                method: 'POST',
+                body: JSON.stringify({ accountId: state.currentAccountId })
+              });
+              showStatus(els.marketplaceStatus, 'success', 'Purchase complete.');
+            } else {
+              const bidInput = document.querySelector('[data-bid-for="' + itemId + '"]');
+              await api('/api/marketplace/' + itemId + '/bid', {
+                method: 'POST',
+                body: JSON.stringify({ accountId: state.currentAccountId, amount: Number(bidInput.value) })
+              });
+              showStatus(els.marketplaceStatus, 'success', 'Bid placed.');
+            }
+            await loadData();
+          } catch (error) {
+            showStatus(els.marketplaceStatus, 'error', error.message);
+          }
         });
 
         document.getElementById('toggleSettings').addEventListener('click', () => {
@@ -1084,11 +1234,12 @@
         const results = await Promise.allSettled([
           api('/api/accounts'),
           api('/api/posts'),
-          api('/api/chats'),
-          api('/api/leaderboard')
+          api('/api/chats?accountId=' + encodeURIComponent(state.currentAccountId)),
+          api('/api/leaderboard'),
+          api('/api/marketplace')
         ]);
 
-        const [accountsResult, postsResult, chatsResult, leaderboardResult] = results;
+        const [accountsResult, postsResult, chatsResult, leaderboardResult, marketplaceResult] = results;
         if (accountsResult.status === 'fulfilled') {
           state.accounts = accountsResult.value.accounts || [];
         }
@@ -1101,10 +1252,14 @@
         if (leaderboardResult.status === 'fulfilled') {
           state.leaderboard = leaderboardResult.value.leaderboard || [];
         }
+        if (marketplaceResult.status === 'fulfilled') {
+          state.marketplace = marketplaceResult.value.items || [];
+        }
 
         const refreshedAccount = state.accounts.find((account) => account.id === state.currentAccountId);
         if (refreshedAccount) {
           state.currentAccount = { ...state.currentAccount, ...refreshedAccount };
+          localStorage.setItem('anagram-session', JSON.stringify(state.currentAccount));
         }
 
         renderWelcome();
@@ -1113,8 +1268,51 @@
         renderChats();
         renderQuests();
         renderEcash();
+        renderMarketplaceTabs();
+        renderMarketplace();
         populateSettings();
         renderDailyResetCountdown();
+      }
+
+      async function restoreSession() {
+        const savedSession = localStorage.getItem('anagram-session');
+        if (!savedSession) return;
+
+        try {
+          state.currentAccount = JSON.parse(savedSession);
+          state.currentAccountId = state.currentAccount.id;
+          els.authView.classList.add('hidden');
+          els.appView.classList.remove('hidden');
+          setTheme(state.currentAccount.theme || 'light');
+          renderWelcome();
+          renderQuests();
+          renderEcash();
+          startChatRefresh();
+          await loadData();
+        } catch (error) {
+          localStorage.removeItem('anagram-session');
+          state.currentAccount = null;
+          state.currentAccountId = null;
+        }
+      }
+
+      function startChatRefresh() {
+        if (state.chatRefreshInterval) {
+          clearInterval(state.chatRefreshInterval);
+        }
+        state.chatRefreshInterval = setInterval(async () => {
+          if (!state.currentAccountId) return;
+          try {
+            const result = await api('/api/chats?accountId=' + encodeURIComponent(state.currentAccountId));
+            state.chats = result.chats || [];
+            renderChats();
+            const marketplaceResult = await api('/api/marketplace');
+            state.marketplace = marketplaceResult.items || [];
+            renderMarketplace();
+          } catch (error) {
+            // Keep the current chat view when a background refresh is temporarily unavailable.
+          }
+        }, 5000);
       }
 
       function renderTabs() {
@@ -1128,6 +1326,12 @@
         });
       }
 
+      function renderMarketplaceTabs() {
+        document.querySelectorAll('[data-market-tab]').forEach((button) => {
+          button.classList.toggle('active', button.dataset.marketTab === state.activeMarketplaceTab);
+        });
+      }
+
       function renderWelcome() {
         if (!state.currentAccount) return;
         els.welcomeText.textContent = 'Welcome back, ' + state.currentAccount.username + '!';
@@ -1135,7 +1339,7 @@
         els.referralCodePill.textContent = state.currentAccount.referralCode || 'No referral code';
         els.friendInviteInput.value = state.currentAccount.referralCode || 'No referral code';
         els.privateBalancePill.textContent = 'E-cash: ' + (state.currentAccount.eCash ?? 0);
-        document.querySelector('.ecash-pill').textContent = 'E-cash: --';
+        document.querySelector('.ecash-pill').textContent = 'E-cash: ' + (state.currentAccount.eCash ?? 0);
       }
 
       function renderLeaderboard() {
@@ -1282,6 +1486,60 @@
             }
           });
         });
+      }
+
+      function renderMarketplace() {
+        const visibleItems = state.marketplace.filter((item) => item.type === state.activeMarketplaceTab);
+
+        if (!visibleItems.length) {
+          els.marketplaceList.innerHTML = '<div class="empty-state">No offers here yet. Create the first one.</div>';
+          return;
+        }
+
+        els.marketplaceList.innerHTML = visibleItems.map((item) => {
+          const isOwner = item.sellerId === state.currentAccountId;
+          const isActive = item.status === 'active';
+          const endsAt = item.endsAt ? new Date(item.endsAt).getTime() : 0;
+          const remaining = item.type === 'auction' && isActive
+            ? formatMarketplaceDuration(Math.max(0, endsAt - Date.now()))
+            : '';
+          const status = item.status === 'sold' ? 'Sold' : item.status === 'ended' ? 'Ended' : 'Active';
+          const action = item.type === 'shop'
+            ? (isActive && !isOwner ? `<button type="button" data-market-action="buy" data-item-id="${item.id}">Buy for ${item.price} e-cash</button>` : '')
+            : (isActive && !isOwner
+              ? `<div class="inline" style="margin-top:12px;"><input data-bid-for="${item.id}" type="number" min="${Number(item.currentPrice || 0) + 1}" step="1" value="${Number(item.currentPrice || 0) + 1}" /><button type="button" data-market-action="bid" data-item-id="${item.id}">Place bid</button></div>`
+              : '');
+
+          return `
+            <article class="marketplace-card ${item.status}">
+              <div class="row-between">
+                <div>
+                  <h3 style="margin:0 0 6px;">${escapeHtml(item.title)}</h3>
+                  <div class="muted">Seller: ${escapeHtml(item.sellerUsername)}</div>
+                </div>
+                <span class="pill">${status}</span>
+              </div>
+              <p>${escapeHtml(item.description || 'No description provided.')}</p>
+              <div class="row-between">
+                <strong>${Number(item.currentPrice || item.price)} e-cash${item.type === 'auction' ? ' current bid' : ''}</strong>
+                <span class="muted">${item.type === 'auction' ? 'Time left: ' + (remaining || 'ended') : 'Fixed price'}</span>
+              </div>
+              ${item.type === 'auction' && item.highestBidderUsername ? `<div class="muted" style="margin-top:8px;">Highest bidder: ${escapeHtml(item.highestBidderUsername)}</div>` : ''}
+              ${action ? `<div style="margin-top:12px;">${action}</div>` : ''}
+            </article>
+          `;
+        }).join('');
+      }
+
+      function formatMarketplaceDuration(milliseconds) {
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        if (days) return `${days}d ${hours}h`;
+        if (hours) return `${hours}h ${minutes}m`;
+        return `${minutes}m ${seconds}s`;
       }
 
       function renderQuests() {
