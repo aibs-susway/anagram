@@ -381,11 +381,12 @@ function playGameRoom(store, accountId, roomId) {
   return room;
 }
 
-function playPlinko(store, accountId, requestedCount = 1) {
+function playPlinko(store, accountId, requestedCount = 1, requestedWager = 1) {
   const account = findAccount(store, accountId);
   const count = Math.min(20, Math.max(1, Number(requestedCount) || 1));
+  const wager = Math.min(1000, Math.max(1, Number(requestedWager) || 1));
   if (!account || account.isBanned) throw new Error('Account not found or banned.');
-  if (!account.isAdmin && Number(account.eCash || 0) < count * PLINKO_DROP_COST) throw new Error(`You need ${count} e-cash for ${count} drops.`);
+  if (!account.isAdmin && Number(account.eCash || 0) < count * wager) throw new Error(`You need ${count * wager} e-cash for ${count} drops.`);
   const drops = [];
   let totalPayout = 0;
 
@@ -398,13 +399,13 @@ function playPlinko(store, accountId, requestedCount = 1) {
       position += direction;
     }
     const slot = Math.max(0, Math.min(PLINKO_PAYOUTS.length - 1, Math.floor((position + PLINKO_ROWS) / 2)));
-    const payout = PLINKO_PAYOUTS[slot];
+    const payout = PLINKO_PAYOUTS[slot] * wager;
     totalPayout += payout;
     drops.push({ path, slot, payout });
   }
 
-  if (!account.isAdmin) account.eCash += totalPayout - count * PLINKO_DROP_COST;
-  return { drops, count, cost: count * PLINKO_DROP_COST, payout: totalPayout };
+  if (!account.isAdmin) account.eCash += totalPayout - count * wager;
+  return { drops, count, wager, cost: count * wager, payout: totalPayout };
 }
 
 async function refreshStockQuotes(store) {
@@ -1214,7 +1215,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/games/plinko') {
     try {
       const body = await readBody(req);
-      const result = playPlinko(store, body.accountId, body.count);
+      const result = playPlinko(store, body.accountId, body.count, body.wager);
       saveStore(store);
       sendJson(res, 200, { result });
     } catch (error) {

@@ -763,7 +763,7 @@
                 <h2>Plinko</h2>
                 <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
                 <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div></div>
-                <div class="inline" style="align-items:center;"><label for="plinkoCount">Drops</label><input id="plinkoCount" type="number" min="1" max="20" value="1" style="max-width:100px;" /><button type="button" id="plinkoButton">Drop chips</button></div>
+                <div class="inline" style="align-items:center;"><label for="plinkoCount">Drops</label><input id="plinkoCount" type="number" min="1" max="20" value="1" style="max-width:100px;" /><label for="plinkoWager">Wager per drop</label><input id="plinkoWager" type="number" min="1" max="1000" value="1" style="max-width:110px;" /><button type="button" id="plinkoButton">Drop chips</button></div>
                 <div id="plinkoResult" class="status"></div>
               </div>
               <div class="card game-panel" style="margin-top:18px;">
@@ -920,6 +920,7 @@
         marketplaceList: document.getElementById('marketplaceList'),
         plinkoButton: document.getElementById('plinkoButton'),
         plinkoCount: document.getElementById('plinkoCount'),
+        plinkoWager: document.getElementById('plinkoWager'),
         plinkoResult: document.getElementById('plinkoResult'),
         rouletteForm: document.getElementById('rouletteForm'),
         rouletteResult: document.getElementById('rouletteResult'),
@@ -1067,7 +1068,8 @@
         els.plinkoButton.addEventListener('click', async () => {
           try {
             const count = Math.min(20, Math.max(1, Number(els.plinkoCount.value) || 1));
-            const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, count }) });
+            const wager = Math.min(1000, Math.max(1, Number(els.plinkoWager.value) || 1));
+            const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, count, wager }) });
             result.result.drops.forEach((drop, index) => animatePlinkoDrop(drop, index));
             showStatus(els.plinkoResult, 'success', `${result.result.count} drop(s): ${result.result.payout} e-cash won. Total cost: ${result.result.cost}.`);
             await loadData();
@@ -1102,10 +1104,15 @@
           } catch (error) { showStatus(els.gameRoomStatus, 'error', error.message); }
         });
 
-        document.addEventListener('click', async (event) => {
-          const action = event.target.closest('[data-stock-side]');
-          if (!action) return;
-          const card = action.closest('.marketplace-card');
+        document.addEventListener('input', (event) => {
+          const input = event.target.closest('[data-stock-quantity]');
+          if (input) state.stockQuantities[input.dataset.stockQuantity] = input.value;
+        });
+
+        async function tradeStockAction(button) {
+          const symbol = button.dataset.stockSymbol;
+          const side = button.dataset.stockSide;
+          const card = button.closest('.marketplace-card');
           const quantityInput = card && card.querySelector('[data-stock-quantity]');
           const quantity = Number(quantityInput && quantityInput.value);
           if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -1113,7 +1120,7 @@
             return;
           }
           try {
-            const trade = await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol: action.dataset.stockSymbol, side: action.dataset.stockSide, quantity }) });
+            const trade = await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol, side, quantity }) });
             showStatus(els.stockStatus, 'success', `${trade.result.side === 'buy' ? 'Bought' : 'Sold'} ${trade.result.quantity} ${trade.result.stock.symbol} share(s).`);
             try {
               await loadData();
@@ -1121,12 +1128,8 @@
               showStatus(els.stockStatus, 'success', 'Trade completed. Refresh the page to update the quote.');
             }
           } catch (error) { showStatus(els.stockStatus, 'error', error.message); }
-        });
-
-        els.stocksList.addEventListener('input', (event) => {
-          const input = event.target.closest('[data-stock-quantity]');
-          if (input) state.stockQuantities[input.dataset.stockQuantity] = input.value;
-        });
+        }
+        window.tradeStockAction = tradeStockAction;
 
         document.getElementById('toggleSettings').addEventListener('click', () => {
           els.settingsPanel.classList.toggle('hidden');
@@ -1560,7 +1563,7 @@
           const purchaseChange = holding.averagePrice ? ((stock.price - holding.averagePrice) / holding.averagePrice) * 100 : 0;
           const dailyChange = Number(stock.changePercent || 0);
           const typedQuantity = state.stockQuantities[stock.symbol] || '0.01';
-          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="muted">Estimated cost: ${(Number(stock.price) * Number(typedQuantity || 0)).toFixed(2)} e-cash</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="${escapeAttribute(typedQuantity)}" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
+          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="muted">Estimated cost: ${(Number(stock.price) * Number(typedQuantity || 0)).toFixed(2)} e-cash</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="${escapeAttribute(typedQuantity)}" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}" onclick="tradeStockAction(this); return false;">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}" onclick="tradeStockAction(this); return false;">Sell</button></div></div>`;
         }).join('');
       }
 
