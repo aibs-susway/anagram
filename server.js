@@ -13,8 +13,8 @@ const FRIEND_REWARD = 20;
 const MIN_AUCTION_SECONDS = 15;
 const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const PLINKO_DROP_COST = 1;
-const PLINKO_PAYOUTS = [0, 0, 0, 1, 2, 1, 0, 0, 0];
-const PLINKO_ROWS = 8;
+const PLINKO_PAYOUTS = [1000, 10, 2, 1, 0, 0, 0, 0, 0, 1, 2, 10, 1000];
+const PLINKO_ROWS = 12;
 const STOCKS = [
   { symbol: 'SPX', quoteSymbol: '%5EGSPC', name: 'S&P 500 Index', price: 500 },
   { symbol: 'NDX', quoteSymbol: '%5ENDX', name: 'Nasdaq-100 Index', price: 420 },
@@ -144,9 +144,10 @@ function loadStore() {
   normalized.marketplace = Array.isArray(store.marketplace) ? store.marketplace : [];
   normalized.games = Array.isArray(store.games) ? store.games : [];
   const storedStocks = Array.isArray(store.stocks) ? store.stocks : [];
-  normalized.stocks = storedStocks.some((stock) => stock.symbol === 'SPX')
-    ? storedStocks
-    : STOCKS.map((stock) => ({ ...stock }));
+  normalized.stocks = STOCKS.map((defaultStock) => ({
+    ...defaultStock,
+    ...(storedStocks.find((stock) => stock.symbol === defaultStock.symbol) || {})
+  }));
 
   normalized.accounts = normalized.accounts.map((account) => ({
     ...account,

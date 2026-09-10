@@ -459,21 +459,22 @@
 
       .plinko-board {
         position: relative;
-        height: 250px;
+        height: 560px;
         padding: 18px 24px 36px;
         background: linear-gradient(150deg, #142b4d, #0c172a);
       }
 
       .plinko-peg { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #e7c879; box-shadow: 0 0 10px rgba(231,200,121,0.7); transform: translate(-50%, -50%); }
-      .plinko-slot { position: absolute; bottom: 0; height: 28px; width: 11.11%; display: grid; place-items: center; color: #dfe9ff; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.16); }
+      .plinko-slot { position: absolute; bottom: 0; height: 44px; width: 7.69%; display: grid; place-items: center; color: #dfe9ff; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.16); text-align: center; }
       .plinko-chip { position: absolute; top: 5%; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translate(-50%, -50%); z-index: 2; }
       .plinko-chip.drop { animation: plinko-bounce 1.7s cubic-bezier(.2,.75,.35,1) forwards; }
       @keyframes plinko-bounce { 0% { opacity: 1; } 100% { opacity: 1; } }
-      .roulette-visual { display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle, #1f4f48, #0d2929); }
+      .roulette-visual { display: grid; place-items: center; min-height: 560px; background: radial-gradient(circle, #1f4f48, #0d2929); }
       .roulette-wheel { position: relative; width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#0d6d55 0 2.7%, #a92738 2.7% 5.4%, #20252e 5.4% 8.1%, #a92738 8.1% 10.8%, #20252e 10.8% 13.5%, #a92738 13.5% 16.2%, #20252e 16.2% 18.9%, #a92738 18.9% 21.6%, #20252e 21.6% 24.3%, #a92738 24.3% 27%, #20252e 27% 29.7%, #a92738 29.7% 32.4%, #20252e 32.4% 35.1%, #a92738 35.1% 37.8%, #20252e 37.8% 40.5%, #a92738 40.5% 43.2%, #20252e 43.2% 45.9%, #a92738 45.9% 48.6%, #20252e 48.6% 51.3%, #a92738 51.3% 54%, #20252e 54% 56.7%, #a92738 56.7% 59.4%, #20252e 59.4% 62.1%, #a92738 62.1% 64.8%, #20252e 64.8% 67.5%, #a92738 67.5% 70.2%, #20252e 70.2% 72.9%, #a92738 72.9% 75.6%, #20252e 75.6% 78.3%, #a92738 78.3% 81%, #20252e 81% 83.7%, #a92738 83.7% 86.4%, #20252e 86.4% 89.1%, #a92738 89.1% 91.8%, #20252e 91.8% 94.5%, #a92738 94.5% 97.2%, #20252e 97.2% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); transition: transform 2.3s cubic-bezier(.12,.72,.15,1); }
       .roulette-number { position: absolute; left: 50%; top: 50%; color: #fff; font-size: 0.63rem; font-weight: 800; transform-origin: 0 0; }
       .roulette-hub { position: absolute; inset: 50% auto auto 50%; width: 52px; height: 52px; transform: translate(-50%, -50%); border-radius: 50%; background: #0d6d55; display: grid; place-items: center; border: 4px solid #d5b46d; color: #fff; font-weight: 900; z-index: 2; }
       .roulette-pointer { position: absolute; top: 8px; left: 50%; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 18px solid #fff2b2; transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 2px 3px #000); }
+      .roulette-wheel { width: min(72vw, 480px); height: min(72vw, 480px); }
       .table-visual { min-height: 180px; border-radius: 100px; background: radial-gradient(ellipse, #17604e, #0b302c); border: 14px solid #6f4a29; display: grid; place-items: center; color: white; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.35); }
       .playing-card { display: inline-grid; place-items: center; width: 42px; height: 58px; margin: 4px; border-radius: 5px; background: #fff; color: #1e293b; font-weight: 800; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
 
@@ -756,15 +757,15 @@
           </section>
 
           <section id="gamesTab" class="tab-section">
-            <div class="grid-2">
-              <div class="card">
+            <div>
+              <div class="card game-panel">
                 <h2>Plinko</h2>
                 <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
                 <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div></div>
                 <div class="inline" style="align-items:center;"><label for="plinkoCount">Drops</label><input id="plinkoCount" type="number" min="1" max="20" value="1" style="max-width:100px;" /><button type="button" id="plinkoButton">Drop chips</button></div>
                 <div id="plinkoResult" class="status"></div>
               </div>
-              <div class="card">
+              <div class="card game-panel" style="margin-top:18px;">
                 <h2>Roulette</h2>
                 <div class="game-visual roulette-visual"><div class="roulette-pointer"></div><div class="roulette-wheel" id="rouletteWheel"><div class="roulette-hub" id="rouletteHub">0</div></div></div>
                 <form id="rouletteForm">
@@ -850,7 +851,7 @@
     </aside>
 
     <script>
-      const PLINKO_LABELS = ['0 e-cash', '0 e-cash', '0 e-cash', '1 e-cash', '2 e-cash', '1 e-cash', '0 e-cash', '0 e-cash', '0 e-cash'];
+      const PLINKO_LABELS = ['1000 e-cash', '10 e-cash', '2 e-cash', '1 e-cash', '0 e-cash', '0 e-cash', '0 e-cash', '0 e-cash', '0 e-cash', '1 e-cash', '2 e-cash', '10 e-cash', '1000 e-cash'];
       const state = {
         accounts: [],
         posts: [],
@@ -866,6 +867,7 @@
         pendingProfilePicture: '',
         dailyResetInterval: null,
         chatRefreshInterval: null
+        ,stockQuantities: {}
       };
 
       const els = {
@@ -1108,6 +1110,11 @@
             showStatus(els.stockStatus, 'success', `${trade.result.side === 'buy' ? 'Bought' : 'Sold'} ${trade.result.quantity} ${trade.result.stock.symbol} share(s).`);
             await loadData();
           } catch (error) { showStatus(els.stockStatus, 'error', error.message); }
+        });
+
+        els.stocksList.addEventListener('input', (event) => {
+          const input = event.target.closest('[data-stock-quantity]');
+          if (input) state.stockQuantities[input.dataset.stockQuantity] = input.value;
         });
 
         document.getElementById('toggleSettings').addEventListener('click', () => {
@@ -1476,16 +1483,14 @@
 
       function renderPlinkoBoard() {
         const pegs = [];
-        for (let row = 0; row < 7; row += 1) {
-          for (let column = 0; column < 9; column += 1) {
-            if ((row + column) % 2 === 0) {
-              const x = 12.5 + column * 9.375;
-              const y = 12 + row * 12;
-              pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
-            }
+        for (let row = 0; row < 12; row += 1) {
+          for (let column = 0; column < 13; column += 1) {
+            const x = 7.7 + column * 7.7;
+            const y = 5 + row * 7.2;
+            pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
           }
         }
-        const slots = Array.from({ length: 9 }, (_, index) => `<span class="plinko-slot" style="left:${index * 11.11}%">${PLINKO_LABELS[index]}</span>`).join('');
+        const slots = Array.from({ length: 13 }, (_, index) => `<span class="plinko-slot" style="left:${index * 7.69}%">${PLINKO_LABELS[index]}</span>`).join('');
         els.plinkoBoard.innerHTML = pegs.join('') + slots;
       }
 
@@ -1497,10 +1502,10 @@
         const frames = [{ top: '5%', left: '50%' }];
         drop.path.forEach((direction, row) => {
           position += direction;
-          const left = 50 + position * 4.7;
-          frames.push({ top: `${12 + row * 10.5}%`, left: `${left}%` });
+          const left = 50 + position * 3.7;
+          frames.push({ top: `${7 + row * 7.2}%`, left: `${left}%` });
         });
-        frames.push({ top: '94%', left: `${12.5 + drop.slot * 9.375}%` });
+        frames.push({ top: '94%', left: `${3.85 + drop.slot * 7.69}%` });
         ball.animate(frames, { duration: 1700, delay: index * 80, easing: 'cubic-bezier(.2,.75,.35,1)', fill: 'forwards' });
         setTimeout(() => ball.remove(), 2100 + index * 80);
       }
@@ -1541,7 +1546,8 @@
           const holding = typeof stored === 'number' ? { quantity: stored, averagePrice: stock.price } : (stored || { quantity: 0, averagePrice: 0 });
           const purchaseChange = holding.averagePrice ? ((stock.price - holding.averagePrice) / holding.averagePrice) * 100 : 0;
           const dailyChange = Number(stock.changePercent || 0);
-          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="0.01" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
+          const typedQuantity = state.stockQuantities[stock.symbol] || '0.01';
+          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="${escapeAttribute(typedQuantity)}" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
         }).join('');
       }
 
