@@ -529,6 +529,8 @@
             <button class="tab-button" data-tab="ecash">E-cash</button>
             <button class="tab-button" data-tab="quests">Quests</button>
             <button class="tab-button" data-tab="shop">Shop</button>
+            <button class="tab-button" data-tab="games">Minigames</button>
+            <button class="tab-button" data-tab="stocks">Stocks</button>
           </nav>
 
           <div class="topbar-right">
@@ -722,6 +724,37 @@
             </div>
             <div id="marketplaceList" class="marketplace-list" style="margin-top:18px;"></div>
           </section>
+
+          <section id="gamesTab" class="tab-section">
+            <div class="grid-2">
+              <div class="card">
+                <h2>Plinko</h2>
+                <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
+                <button type="button" id="plinkoButton">Drop chip for 1 e-cash</button>
+                <div id="plinkoResult" class="status"></div>
+              </div>
+              <div class="card">
+                <h2>Roulette</h2>
+                <form id="rouletteForm">
+                  <div class="form-row"><label for="rouletteChoice">Bet choice</label><select id="rouletteChoice"><option value="red">Red (2x)</option><option value="black">Black (2x)</option><option value="0">Exact 0 (36x)</option><option value="7">Exact 7 (36x)</option></select></div>
+                  <div class="form-row"><label for="rouletteAmount">Wager</label><input id="rouletteAmount" type="number" min="1" value="1" required /></div>
+                  <button type="submit">Spin roulette</button><div id="rouletteResult" class="status"></div>
+                </form>
+              </div>
+            </div>
+            <div class="card" style="margin-top:18px;">
+              <h2>Multiplayer tables</h2>
+              <form id="gameRoomForm" class="inline">
+                <select id="gameType"><option value="holdem">Texas Hold-em</option><option value="blackjack">Blackjack</option></select>
+                <input id="gameWager" type="number" min="1" value="1" required /><button type="submit">Create table</button>
+              </form>
+              <div id="gameRoomStatus" class="status"></div><div id="gameRoomsList" class="marketplace-list"></div>
+            </div>
+          </section>
+
+          <section id="stocksTab" class="tab-section">
+            <div class="card"><h2>Stock market</h2><p class="muted">Buy and sell virtual shares of the top Anagram stocks using e-cash.</p><div id="stocksList" class="marketplace-list"></div></div>
+          </section>
         </section>
       </main>
     </div>
@@ -790,6 +823,8 @@
         chats: [],
         leaderboard: [],
         marketplace: [],
+        games: [],
+        stocks: [],
         currentAccountId: null,
         currentAccount: null,
         activeTab: 'leaderboard',
@@ -845,7 +880,15 @@
         auctionDurationRow: document.getElementById('auctionDurationRow'),
         auctionDuration: document.getElementById('auctionDuration'),
         marketplaceStatus: document.getElementById('marketplaceStatus'),
-        marketplaceList: document.getElementById('marketplaceList')
+        marketplaceList: document.getElementById('marketplaceList'),
+        plinkoButton: document.getElementById('plinkoButton'),
+        plinkoResult: document.getElementById('plinkoResult'),
+        rouletteForm: document.getElementById('rouletteForm'),
+        rouletteResult: document.getElementById('rouletteResult'),
+        gameRoomForm: document.getElementById('gameRoomForm'),
+        gameRoomStatus: document.getElementById('gameRoomStatus'),
+        gameRoomsList: document.getElementById('gameRoomsList'),
+        stocksList: document.getElementById('stocksList')
       };
 
       document.addEventListener('DOMContentLoaded', init);
@@ -975,6 +1018,51 @@
           } catch (error) {
             showStatus(els.marketplaceStatus, 'error', error.message);
           }
+        });
+
+        els.plinkoButton.addEventListener('click', async () => {
+          try {
+            const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId }) });
+            showStatus(els.plinkoResult, 'success', `Slot ${result.result.slot}: ${result.result.payout} e-cash won (${result.result.multiplier}x).`);
+            await loadData();
+          } catch (error) { showStatus(els.plinkoResult, 'error', error.message); }
+        });
+
+        els.rouletteForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            const result = await api('/api/games/roulette', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, choice: document.getElementById('rouletteChoice').value, amount: Number(document.getElementById('rouletteAmount').value) }) });
+            showStatus(els.rouletteResult, 'success', `The wheel landed on ${result.result.number}. Payout: ${result.result.payout} e-cash.`);
+            await loadData();
+          } catch (error) { showStatus(els.rouletteResult, 'error', error.message); }
+        });
+
+        els.gameRoomForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await api('/api/games', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, type: document.getElementById('gameType').value, wager: Number(document.getElementById('gameWager').value) }) });
+            showStatus(els.gameRoomStatus, 'success', 'Table created. Invite another player to join.');
+            await loadData();
+          } catch (error) { showStatus(els.gameRoomStatus, 'error', error.message); }
+        });
+
+        els.gameRoomsList.addEventListener('click', async (event) => {
+          const action = event.target.closest('[data-game-action]');
+          if (!action) return;
+          try {
+            await api('/api/games/' + action.dataset.gameId + '/' + action.dataset.gameAction, { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId }) });
+            await loadData();
+          } catch (error) { showStatus(els.gameRoomStatus, 'error', error.message); }
+        });
+
+        els.stocksList.addEventListener('click', async (event) => {
+          const action = event.target.closest('[data-stock-side]');
+          if (!action) return;
+          const quantity = Number(document.querySelector('[data-stock-quantity="' + action.dataset.stockSymbol + '"]').value);
+          try {
+            await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol: action.dataset.stockSymbol, side: action.dataset.stockSide, quantity }) });
+            await loadData();
+          } catch (error) { alert(error.message); }
         });
 
         document.getElementById('toggleSettings').addEventListener('click', () => {
@@ -1236,10 +1324,12 @@
           api('/api/posts'),
           api('/api/chats?accountId=' + encodeURIComponent(state.currentAccountId)),
           api('/api/leaderboard'),
-          api('/api/marketplace')
+          api('/api/marketplace'),
+          api('/api/games'),
+          api('/api/stocks')
         ]);
 
-        const [accountsResult, postsResult, chatsResult, leaderboardResult, marketplaceResult] = results;
+        const [accountsResult, postsResult, chatsResult, leaderboardResult, marketplaceResult, gamesResult, stocksResult] = results;
         if (accountsResult.status === 'fulfilled') {
           state.accounts = accountsResult.value.accounts || [];
         }
@@ -1255,6 +1345,8 @@
         if (marketplaceResult.status === 'fulfilled') {
           state.marketplace = marketplaceResult.value.items || [];
         }
+        if (gamesResult.status === 'fulfilled') state.games = gamesResult.value.games || [];
+        if (stocksResult.status === 'fulfilled') state.stocks = stocksResult.value.stocks || [];
 
         const refreshedAccount = state.accounts.find((account) => account.id === state.currentAccountId);
         if (refreshedAccount) {
@@ -1270,6 +1362,8 @@
         renderEcash();
         renderMarketplaceTabs();
         renderMarketplace();
+        renderGameRooms();
+        renderStocks();
         populateSettings();
         renderDailyResetCountdown();
       }
@@ -1330,6 +1424,23 @@
         document.querySelectorAll('[data-market-tab]').forEach((button) => {
           button.classList.toggle('active', button.dataset.marketTab === state.activeMarketplaceTab);
         });
+      }
+
+      function renderGameRooms() {
+        if (!state.games.length) {
+          els.gameRoomsList.innerHTML = '<div class="empty-state">No open multiplayer tables.</div>';
+          return;
+        }
+        els.gameRoomsList.innerHTML = state.games.map((game) => {
+          const joined = game.players.includes(state.currentAccountId);
+          return `<div class="marketplace-card"><div class="row-between"><strong>${game.type === 'holdem' ? 'Texas Hold-em' : 'Blackjack'}</strong><span class="pill">${game.players.length}/6 players</span></div><div class="muted">Host: ${escapeHtml(game.hostUsername)} | Wager: ${game.wager} e-cash</div><div style="margin-top:10px;">${joined ? `<button type="button" data-game-action="play" data-game-id="${game.id}">Play round</button>` : `<button type="button" data-game-action="join" data-game-id="${game.id}">Join table</button>`}</div></div>`;
+        }).join('');
+      }
+
+      function renderStocks() {
+        if (!state.stocks.length) { els.stocksList.innerHTML = '<div class="empty-state">Stock quotes unavailable.</div>'; return; }
+        const holdings = state.currentAccount?.stocks || {};
+        els.stocksList.innerHTML = state.stocks.map((stock) => `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">${stock.price} e-cash/share</span></div><div class="muted">You own ${holdings[stock.symbol] || 0} shares</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="1" value="1" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`).join('');
       }
 
       function renderWelcome() {

@@ -12,6 +12,15 @@ const REFERRAL_REWARD = 40;
 const FRIEND_REWARD = 20;
 const MIN_AUCTION_SECONDS = 15;
 const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
+const PLINKO_DROP_COST = 1;
+const PLINKO_MULTIPLIERS = [0, 0.2, 0.5, 0.8, 1.2, 0.8, 0.5, 0.2, 0];
+const STOCKS = [
+  { symbol: 'ANAG', name: 'Anagram Labs', price: 25 },
+  { symbol: 'CHAT', name: 'ChatWorks', price: 40 },
+  { symbol: 'PLAY', name: 'PlayForge', price: 15 },
+  { symbol: 'CASH', name: 'Cashline', price: 60 },
+  { symbol: 'NOVA', name: 'Nova Systems', price: 90 }
+];
 const ADMIN_USERNAME = 'despawn';
 const ADMIN_PASSWORD = 'TalkingRian';
 
@@ -25,7 +34,9 @@ function ensureDataFile() {
           posts: [],
           chats: [],
           transfers: [],
-          marketplace: []
+          marketplace: [],
+          games: [],
+          stocks: STOCKS
         },
         null,
         2
@@ -53,7 +64,9 @@ function getDefaultStore() {
     posts: [],
     chats: [],
     transfers: [],
-    marketplace: []
+    marketplace: [],
+    games: [],
+    stocks: STOCKS
   };
 }
 
@@ -123,10 +136,13 @@ function loadStore() {
   normalized.chats = Array.isArray(store.chats) ? store.chats : [];
   normalized.transfers = Array.isArray(store.transfers) ? store.transfers : [];
   normalized.marketplace = Array.isArray(store.marketplace) ? store.marketplace : [];
+  normalized.games = Array.isArray(store.games) ? store.games : [];
+  normalized.stocks = Array.isArray(store.stocks) && store.stocks.length ? store.stocks : STOCKS.map((stock) => ({ ...stock }));
 
   normalized.accounts = normalized.accounts.map((account) => ({
     ...account,
     friends: Array.isArray(account.friends) ? account.friends : [],
+    stocks: account.stocks && typeof account.stocks === 'object' ? account.stocks : {},
     emailVerified: account.emailVerified !== false,
     emailVerificationCode: account.emailVerificationCode || ''
   }));
@@ -293,6 +309,116 @@ function placeMarketplaceBid(store, bidderId, itemId, amount) {
   return item;
 }
 
+function getGameRoom(store, roomId) {
+  return store.games.find((room) => room.id === roomId);
+}
+
+function createGameRoom(store, accountId, input) {
+  const account = findAccount(store, accountId);
+  const type = ['holdem', 'blackjack'].includes(input.type) ? input.type : 'holdem';
+  const wager = Number(input.wager);
+  if (!account || account.isBanned) throw new Error('Account not found or banned.');
+  if (!Number.isInteger(wager) || wager < 1) throw new Error('Wager must be a positive whole number.');
+  if (!account.isAdmin && Number(account.eCash || 0) < wager) throw new Error('Insufficient e-cash balance.');
+
+  const room = {
+    id: randomBytes(5).toString('hex'),
+    type,
+    wager,
+    hostId: accountId,
+    players: [accountId],
+    status: 'waiting',
+    createdAt: new Date().toISOString(),
+    result: null
+  };
+  store.games.unshift(room);
+  return room;
+}
+
+function joinGameRoom(store, accountId, roomId) {
+  const account = findAccount(store, accountId);
+  const room = getGameRoom(store, roomId);
+  if (!account || account.isBanned || !room) throw new Error('Account or game room not found.');
+  if (room.status !== 'waiting') throw new Error('This game is already in progress or finished.');
+  if (!room.players.includes(accountId)) {
+    if (room.players.length >= 6) throw new Error('This game room is full.');
+    if (!account.isAdmin && Number(account.eCash || 0) < room.wager) throw new Error('Insufficient e-cash balance.');
+    room.players.push(accountId);
+  }
+  return room;
+}
+
+function playGameRoom(store, accountId, roomId) {
+  const room = getGameRoom(store, roomId);
+  if (!room || !room.players.includes(accountId)) throw new Error('You are not in this game room.');
+  if (room.players.length < 2) throw new Error('At least two players are required.');
+  if (room.status === 'finished') return room;
+
+  room.players.forEach((playerId) => {
+    const player = findAccount(store, playerId);
+    if (player && !player.isAdmin) {
+      if (Number(player.eCash || 0) < room.wager) throw new Error('A player no longer has enough e-cash for this wager.');
+      player.eCash -= room.wager;
+    }
+  });
+
+  room.status = 'finished';
+  const winnerId = room.players[Math.floor(Math.random() * room.players.length)];
+  const prize = room.wager * room.players.length;
+  const winner = findAccount(store, winnerId);
+  if (winner && !winner.isAdmin) winner.eCash = Number(winner.eCash || 0) + prize;
+  room.result = { winnerId, prize, message: `${room.type === 'holdem' ? 'Texas Hold-em' : 'Blackjack'} winner selected.` };
+  return room;
+}
+
+function playPlinko(store, accountId) {
+  const account = findAccount(store, accountId);
+  if (!account || account.isBanned) throw new Error('Account not found or banned.');
+  if (!account.isAdmin && Number(account.eCash || 0) < PLINKO_DROP_COST) throw new Error('You need 1 e-cash to drop a chip.');
+  if (!account.isAdmin) account.eCash = Number(account.eCash || 0) - PLINKO_DROP_COST;
+  const slot = Math.floor(Math.random() * PLINKO_MULTIPLIERS.length);
+  const payout = Math.floor(PLINKO_DROP_COST * PLINKO_MULTIPLIERS[slot]);
+  if (!account.isAdmin) account.eCash += payout;
+  return { slot, multiplier: PLINKO_MULTIPLIERS[slot], cost: PLINKO_DROP_COST, payout };
+}
+
+function playRoulette(store, accountId, input) {
+  const account = findAccount(store, accountId);
+  const wager = Number(input.amount);
+  if (!account || account.isBanned) throw new Error('Account not found or banned.');
+  if (!Number.isInteger(wager) || wager < 1) throw new Error('Roulette wager must be a positive whole number.');
+  if (!account.isAdmin && Number(account.eCash || 0) < wager) throw new Error('Insufficient e-cash balance.');
+  if (!account.isAdmin) account.eCash -= wager;
+  const number = Math.floor(Math.random() * 37);
+  const won = input.choice === 'red' ? number !== 0 && number % 2 === 1 : input.choice === 'black' ? number !== 0 && number % 2 === 0 : Number(input.choice) === number;
+  const multiplier = Number(input.choice) === number ? 35 : won ? 1 : 0;
+  const payout = wager * multiplier;
+  if (!account.isAdmin) account.eCash += payout;
+  return { number, choice: input.choice, payout, multiplier };
+}
+
+function tradeStock(store, accountId, input) {
+  const account = findAccount(store, accountId);
+  const stock = store.stocks.find((entry) => entry.symbol === input.symbol);
+  const quantity = Number(input.quantity);
+  const side = input.side === 'sell' ? 'sell' : 'buy';
+  if (!account || account.isBanned || !stock) throw new Error('Account or stock not found.');
+  if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Quantity must be a positive whole number.');
+  account.stocks = account.stocks || {};
+  const held = Number(account.stocks[stock.symbol] || 0);
+  if (side === 'buy') {
+    const cost = stock.price * quantity;
+    if (!account.isAdmin && Number(account.eCash || 0) < cost) throw new Error('Insufficient e-cash balance.');
+    if (!account.isAdmin) account.eCash -= cost;
+    account.stocks[stock.symbol] = held + quantity;
+  } else {
+    if (held < quantity) throw new Error('You do not own enough shares.');
+    account.stocks[stock.symbol] = held - quantity;
+    if (!account.isAdmin) account.eCash += stock.price * quantity;
+  }
+  return { stock, side, quantity, shares: account.stocks };
+}
+
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
@@ -443,6 +569,7 @@ function createAccount(store, input) {
     emailVerificationCode: '',
     referralCode: referralCode || randomBytes(4).toString('hex').toUpperCase(),
     friends: [],
+    stocks: {},
     createdAt: new Date().toISOString(),
     daily: {
       date: todayKey(),
@@ -822,6 +949,16 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/games') {
+    sendJson(res, 200, { games: store.games.filter((room) => room.status === 'waiting').map((room) => ({ ...room, hostUsername: findAccount(store, room.hostId)?.username || 'Unknown' })) });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/stocks') {
+    sendJson(res, 200, { stocks: store.stocks });
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/leaderboard') {
     const leaderboard = store.accounts
       .filter((account) => !account.isAdmin)
@@ -963,6 +1100,80 @@ const server = http.createServer(async (req, res) => {
       const item = createMarketplaceItem(store, body);
       saveStore(store);
       sendJson(res, 201, { item: serializeMarketplace(store, item) });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/games') {
+    try {
+      const body = await readBody(req);
+      const room = createGameRoom(store, body.accountId, body);
+      saveStore(store);
+      sendJson(res, 201, { game: room });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname.startsWith('/api/games/') && url.pathname.endsWith('/join')) {
+    try {
+      const roomId = url.pathname.split('/api/games/')[1].split('/join')[0];
+      const body = await readBody(req);
+      const room = joinGameRoom(store, body.accountId, roomId);
+      saveStore(store);
+      sendJson(res, 200, { game: room });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname.startsWith('/api/games/') && url.pathname.endsWith('/play')) {
+    try {
+      const roomId = url.pathname.split('/api/games/')[1].split('/play')[0];
+      const body = await readBody(req);
+      const room = playGameRoom(store, body.accountId, roomId);
+      saveStore(store);
+      sendJson(res, 200, { game: room });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/games/plinko') {
+    try {
+      const body = await readBody(req);
+      const result = playPlinko(store, body.accountId);
+      saveStore(store);
+      sendJson(res, 200, { result });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/games/roulette') {
+    try {
+      const body = await readBody(req);
+      const result = playRoulette(store, body.accountId, body);
+      saveStore(store);
+      sendJson(res, 200, { result });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/stocks/trade') {
+    try {
+      const body = await readBody(req);
+      const result = tradeStock(store, body.accountId, body);
+      saveStore(store);
+      sendJson(res, 200, { result });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }
