@@ -13,7 +13,7 @@ const FRIEND_REWARD = 20;
 const MIN_AUCTION_SECONDS = 15;
 const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const PLINKO_DROP_COST = 1;
-const PLINKO_MULTIPLIERS = [0, 0.2, 0.5, 0.8, 1.2, 0.8, 0.5, 0.2, 0];
+const PLINKO_PAYOUTS = [0, 0, 0, 1, 2, 1, 0, 0, 0];
 const PLINKO_ROWS = 8;
 const STOCKS = [
   { symbol: 'SPX', quoteSymbol: '%5EGSPC', name: 'S&P 500 Index', price: 500 },
@@ -396,10 +396,10 @@ function playPlinko(store, accountId, requestedCount = 1) {
       path.push(direction);
       position += direction;
     }
-    const slot = Math.max(0, Math.min(PLINKO_MULTIPLIERS.length - 1, Math.floor((position + PLINKO_ROWS) / 2)));
-    const payout = Math.floor(PLINKO_DROP_COST * PLINKO_MULTIPLIERS[slot]);
+    const slot = Math.max(0, Math.min(PLINKO_PAYOUTS.length - 1, Math.floor((position + PLINKO_ROWS) / 2)));
+    const payout = PLINKO_PAYOUTS[slot];
     totalPayout += payout;
-    drops.push({ path, slot, multiplier: PLINKO_MULTIPLIERS[slot], payout });
+    drops.push({ path, slot, payout });
   }
 
   if (!account.isAdmin) account.eCash += totalPayout - count * PLINKO_DROP_COST;
@@ -414,9 +414,12 @@ async function refreshStockQuotes(store) {
       const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.quoteSymbol}?range=1d&interval=1m`);
       if (!response.ok) return;
       const payload = await response.json();
-      const quote = payload.chart?.result?.[0]?.meta?.regularMarketPrice;
+      const metadata = payload.chart?.result?.[0]?.meta || {};
+      const quote = metadata.regularMarketPrice;
       if (Number.isFinite(quote)) {
         stock.price = Number(quote.toFixed(2));
+        stock.previousClose = Number((metadata.previousClose || quote).toFixed(2));
+        stock.changePercent = stock.previousClose ? Number((((quote - stock.previousClose) / stock.previousClose) * 100).toFixed(2)) : 0;
         stock.priceSource = 'Yahoo Finance';
       }
     } catch (error) {
@@ -448,20 +451,26 @@ function tradeStock(store, accountId, input) {
   const quantity = Number(input.quantity);
   const side = input.side === 'sell' ? 'sell' : 'buy';
   if (!account || account.isBanned || !stock) throw new Error('Account or stock not found.');
-  if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Quantity must be a positive whole number.');
+  if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Quantity must be greater than zero.');
   account.stocks = account.stocks || {};
-  const held = Number(account.stocks[stock.symbol] || 0);
+  const storedHolding = account.stocks[stock.symbol];
+  const holding = typeof storedHolding === 'number'
+    ? { quantity: storedHolding, averagePrice: stock.price }
+    : (storedHolding || { quantity: 0, averagePrice: 0 });
+  const held = Number(holding.quantity || 0);
   if (side === 'buy') {
     const cost = stock.price * quantity;
     if (!account.isAdmin && Number(account.eCash || 0) < cost) throw new Error('Insufficient e-cash balance.');
     if (!account.isAdmin) account.eCash -= cost;
-    account.stocks[stock.symbol] = held + quantity;
+    holding.averagePrice = held + quantity ? ((held * Number(holding.averagePrice || stock.price)) + cost) / (held + quantity) : stock.price;
+    holding.quantity = held + quantity;
   } else {
     if (held < quantity) throw new Error('You do not own enough shares.');
-    account.stocks[stock.symbol] = held - quantity;
+    holding.quantity = held - quantity;
     if (!account.isAdmin) account.eCash += stock.price * quantity;
   }
-  return { stock, side, quantity, shares: account.stocks };
+  account.stocks[stock.symbol] = holding;
+  return { stock, side, quantity, holding };
 }
 
 function sendJson(res, statusCode, data) {

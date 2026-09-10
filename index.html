@@ -760,7 +760,7 @@
               <div class="card">
                 <h2>Plinko</h2>
                 <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
-                <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div><div class="plinko-chip" id="plinkoChip"></div></div>
+                <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div></div>
                 <div class="inline" style="align-items:center;"><label for="plinkoCount">Drops</label><input id="plinkoCount" type="number" min="1" max="20" value="1" style="max-width:100px;" /><button type="button" id="plinkoButton">Drop chips</button></div>
                 <div id="plinkoResult" class="status"></div>
               </div>
@@ -786,7 +786,7 @@
           </section>
 
           <section id="stocksTab" class="tab-section">
-            <div class="card"><h2>Stock market</h2><p class="muted">Buy and sell virtual shares of the top Anagram stocks using e-cash.</p><div id="stocksList" class="marketplace-list"></div></div>
+            <div class="card"><h2>Stock market</h2><p class="muted">Prices use delayed public market quotes when available. E-cash trades use the displayed quote.</p><div id="stocksList" class="marketplace-list"></div><div id="stockStatus" class="status"></div></div>
           </section>
         </section>
       </main>
@@ -850,7 +850,7 @@
     </aside>
 
     <script>
-      const PLINKO_LABELS = ['0x', '0.2x', '0.5x', '0.8x', '1.2x', '0.8x', '0.5x', '0.2x', '0x'];
+      const PLINKO_LABELS = ['0 e-cash', '0 e-cash', '0 e-cash', '1 e-cash', '2 e-cash', '1 e-cash', '0 e-cash', '0 e-cash', '0 e-cash'];
       const state = {
         accounts: [],
         posts: [],
@@ -925,7 +925,7 @@
         gameRoomsList: document.getElementById('gameRoomsList'),
         stocksList: document.getElementById('stocksList')
         ,plinkoBoard: document.getElementById('plinkoBoard'),
-        plinkoChip: document.getElementById('plinkoChip'),
+        stockStatus: document.getElementById('stockStatus'),
         rouletteWheel: document.getElementById('rouletteWheel'),
         rouletteHub: document.getElementById('rouletteHub')
       };
@@ -1104,9 +1104,10 @@
           if (!action) return;
           const quantity = Number(document.querySelector('[data-stock-quantity="' + action.dataset.stockSymbol + '"]').value);
           try {
-            await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol: action.dataset.stockSymbol, side: action.dataset.stockSide, quantity }) });
+            const trade = await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol: action.dataset.stockSymbol, side: action.dataset.stockSide, quantity }) });
+            showStatus(els.stockStatus, 'success', `${trade.result.side === 'buy' ? 'Bought' : 'Sold'} ${trade.result.quantity} ${trade.result.stock.symbol} share(s).`);
             await loadData();
-          } catch (error) { alert(error.message); }
+          } catch (error) { showStatus(els.stockStatus, 'error', error.message); }
         });
 
         document.getElementById('toggleSettings').addEventListener('click', () => {
@@ -1478,7 +1479,7 @@
         for (let row = 0; row < 7; row += 1) {
           for (let column = 0; column < 9; column += 1) {
             if ((row + column) % 2 === 0) {
-              const x = 12.5 + column * 9.375 + (row % 2 ? 4.7 : 0);
+              const x = 12.5 + column * 9.375;
               const y = 12 + row * 12;
               pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
             }
@@ -1535,7 +1536,13 @@
       function renderStocks() {
         if (!state.stocks.length) { els.stocksList.innerHTML = '<div class="empty-state">Stock quotes unavailable.</div>'; return; }
         const holdings = state.currentAccount?.stocks || {};
-        els.stocksList.innerHTML = state.stocks.map((stock) => `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">You own ${holdings[stock.symbol] || 0} shares · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="1" value="1" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`).join('');
+        els.stocksList.innerHTML = state.stocks.map((stock) => {
+          const stored = holdings[stock.symbol];
+          const holding = typeof stored === 'number' ? { quantity: stored, averagePrice: stock.price } : (stored || { quantity: 0, averagePrice: 0 });
+          const purchaseChange = holding.averagePrice ? ((stock.price - holding.averagePrice) / holding.averagePrice) * 100 : 0;
+          const dailyChange = Number(stock.changePercent || 0);
+          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="0.01" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
+        }).join('');
       }
 
       function renderWelcome() {
