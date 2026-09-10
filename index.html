@@ -471,9 +471,10 @@
       @keyframes plinko-bounce { 0% { opacity: 1; } 100% { opacity: 1; } }
       .roulette-visual { display: grid; place-items: center; min-height: 560px; background: radial-gradient(circle, #1f4f48, #0d2929); }
       .roulette-wheel { position: relative; width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#0d6d55 0 2.7%, #a92738 2.7% 5.4%, #20252e 5.4% 8.1%, #a92738 8.1% 10.8%, #20252e 10.8% 13.5%, #a92738 13.5% 16.2%, #20252e 16.2% 18.9%, #a92738 18.9% 21.6%, #20252e 21.6% 24.3%, #a92738 24.3% 27%, #20252e 27% 29.7%, #a92738 29.7% 32.4%, #20252e 32.4% 35.1%, #a92738 35.1% 37.8%, #20252e 37.8% 40.5%, #a92738 40.5% 43.2%, #20252e 43.2% 45.9%, #a92738 45.9% 48.6%, #20252e 48.6% 51.3%, #a92738 51.3% 54%, #20252e 54% 56.7%, #a92738 56.7% 59.4%, #20252e 59.4% 62.1%, #a92738 62.1% 64.8%, #20252e 64.8% 67.5%, #a92738 67.5% 70.2%, #20252e 70.2% 72.9%, #a92738 72.9% 75.6%, #20252e 75.6% 78.3%, #a92738 78.3% 81%, #20252e 81% 83.7%, #a92738 83.7% 86.4%, #20252e 86.4% 89.1%, #a92738 89.1% 91.8%, #20252e 91.8% 94.5%, #a92738 94.5% 97.2%, #20252e 97.2% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); transition: transform 2.3s cubic-bezier(.12,.72,.15,1); }
-      .roulette-number { position: absolute; left: 50%; top: 50%; color: #fff; font-size: 0.63rem; font-weight: 800; transform-origin: 0 0; }
+      .roulette-number { position: absolute; left: 50%; top: 50%; color: #fff; font-size: 1rem; font-weight: 800; transform-origin: 0 0; }
       .roulette-hub { position: absolute; inset: 50% auto auto 50%; width: 52px; height: 52px; transform: translate(-50%, -50%); border-radius: 50%; background: #0d6d55; display: grid; place-items: center; border: 4px solid #d5b46d; color: #fff; font-weight: 900; z-index: 2; }
       .roulette-pointer { position: absolute; top: 8px; left: 50%; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 18px solid #fff2b2; transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 2px 3px #000); }
+      .roulette-wheel { width: min(72vw, 480px); height: min(72vw, 480px); }
       .roulette-wheel { width: min(72vw, 480px); height: min(72vw, 480px); }
       .table-visual { min-height: 180px; border-radius: 100px; background: radial-gradient(ellipse, #17604e, #0b302c); border: 14px solid #6f4a29; display: grid; place-items: center; color: white; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.35); }
       .playing-card { display: inline-grid; place-items: center; width: 42px; height: 58px; margin: 4px; border-radius: 5px; background: #fff; color: #1e293b; font-weight: 800; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
@@ -1483,8 +1484,10 @@
 
       function renderPlinkoBoard() {
         const pegs = [];
-        for (let row = 0; row < 12; row += 1) {
-          for (let column = 0; column < 13; column += 1) {
+        for (let row = 0; row < 13; row += 1) {
+          const visibleColumns = row + 1;
+          const firstColumn = Math.floor((13 - visibleColumns) / 2);
+          for (let column = firstColumn; column < firstColumn + visibleColumns; column += 1) {
             const x = 7.7 + column * 7.7;
             const y = 5 + row * 7.2;
             pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
@@ -1506,15 +1509,15 @@
           frames.push({ top: `${7 + row * 7.2}%`, left: `${left}%` });
         });
         frames.push({ top: '94%', left: `${3.85 + drop.slot * 7.69}%` });
-        ball.animate(frames, { duration: 1700, delay: index * 80, easing: 'cubic-bezier(.2,.75,.35,1)', fill: 'forwards' });
-        setTimeout(() => ball.remove(), 2100 + index * 80);
+        ball.animate(frames, { duration: 3200, delay: index * 150, easing: 'cubic-bezier(.2,.75,.35,1)', fill: 'forwards' });
+        setTimeout(() => ball.remove(), 3700 + index * 150);
       }
 
       function renderRouletteWheel() {
         const rouletteNumbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
         const numberMarkup = rouletteNumbers.map((number, index) => {
           const angle = index * (360 / rouletteNumbers.length);
-          return `<span class="roulette-number" style="transform:rotate(${angle}deg) translateY(-77px) rotate(${-angle}deg)">${number}</span>`;
+          return `<span class="roulette-number" style="transform:rotate(${angle}deg) translateY(-195px) rotate(${-angle}deg)">${number}</span>`;
         }).join('');
         els.rouletteWheel.insertAdjacentHTML('afterbegin', numberMarkup);
       }
@@ -1547,7 +1550,7 @@
           const purchaseChange = holding.averagePrice ? ((stock.price - holding.averagePrice) / holding.averagePrice) * 100 : 0;
           const dailyChange = Number(stock.changePercent || 0);
           const typedQuantity = state.stockQuantities[stock.symbol] || '0.01';
-          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="${escapeAttribute(typedQuantity)}" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
+          return `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">Daily change: ${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}% · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="muted">You own ${Number(holding.quantity || 0).toFixed(4)} shares · Since purchase: ${purchaseChange >= 0 ? '+' : ''}${purchaseChange.toFixed(2)}%</div><div class="muted">Estimated cost: ${(Number(stock.price) * Number(typedQuantity || 0)).toFixed(2)} e-cash</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="0.01" step="0.01" value="${escapeAttribute(typedQuantity)}" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`;
         }).join('');
       }
 
