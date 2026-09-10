@@ -936,7 +936,14 @@ const server = http.createServer(async (req, res) => {
     const chats = accountId
       ? store.chats.filter((chat) => (chat.participants || []).includes(accountId))
       : store.chats;
-    sendJson(res, 200, { chats });
+    const chatsWithUsernames = chats.map((chat) => ({
+      ...chat,
+      messages: (chat.messages || []).map((message) => ({
+        ...message,
+        username: findAccount(store, message.accountId)?.username || 'Deleted user'
+      }))
+    }));
+    sendJson(res, 200, { chats: chatsWithUsernames });
     return;
   }
 

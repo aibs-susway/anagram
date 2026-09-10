@@ -1551,7 +1551,7 @@
 
         els.chatsList.innerHTML = state.chats.map((chat) => {
           const messages = (chat.messages || []).map((message) => {
-            const sender = state.accounts.find((account) => account.id === message.accountId) || { username: 'Unknown' };
+            const sender = state.accounts.find((account) => account.id === message.accountId) || { id: message.accountId, username: message.username || 'Deleted user' };
             return `
               <div class="message">
                 <strong class="username-clickable" data-account-id="${sender.id}">${escapeHtml(sender.username)}:</strong> ${escapeHtml(message.text)}
