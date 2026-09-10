@@ -458,22 +458,22 @@
       }
 
       .plinko-board {
+        position: relative;
         height: 250px;
-        display: grid;
-        grid-template-columns: repeat(9, 1fr);
-        grid-template-rows: repeat(7, 1fr);
         padding: 18px 24px 36px;
         background: linear-gradient(150deg, #142b4d, #0c172a);
       }
 
-      .plinko-peg { width: 8px; height: 8px; border-radius: 50%; background: #e7c879; box-shadow: 0 0 10px rgba(231,200,121,0.7); justify-self: center; align-self: center; }
+      .plinko-peg { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #e7c879; box-shadow: 0 0 10px rgba(231,200,121,0.7); transform: translate(-50%, -50%); }
       .plinko-slot { position: absolute; bottom: 0; height: 28px; width: 11.11%; display: grid; place-items: center; color: #dfe9ff; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.16); }
-      .plinko-chip { position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translateX(-50%); opacity: 0; }
-      .plinko-chip.drop { animation: plinko-drop 1.2s ease-in forwards; }
-      @keyframes plinko-drop { 0% { opacity: 1; top: 8px; left: 50%; } 100% { opacity: 1; top: 205px; left: var(--chip-x, 50%); } }
+      .plinko-chip { position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translate(-50%, -50%); opacity: 0; z-index: 2; }
+      .plinko-chip.drop { opacity: 1; animation: plinko-bounce 1.7s cubic-bezier(.2,.75,.35,1) forwards; }
+      @keyframes plinko-bounce { 0% { top: 5%; left: 50%; } 12% { top: 17%; left: 44%; } 24% { top: 29%; left: 53%; } 36% { top: 41%; left: 46%; } 48% { top: 53%; left: 57%; } 60% { top: 65%; left: 49%; } 72% { top: 77%; left: 61%; } 84% { top: 88%; left: 54%; } 100% { top: 92%; left: var(--chip-x, 50%); } }
       .roulette-visual { display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle, #1f4f48, #0d2929); }
-      .roulette-wheel { width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#a92738 0 10%, #20252e 10% 20%, #a92738 20% 30%, #20252e 30% 40%, #a92738 40% 50%, #20252e 50% 60%, #a92738 60% 70%, #20252e 70% 80%, #a92738 80% 90%, #20252e 90% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); display: grid; place-items: center; color: white; font-weight: 900; transition: transform 0.9s cubic-bezier(.17,.67,.22,1); }
-      .roulette-wheel::after { content: '0'; width: 56px; height: 56px; border-radius: 50%; background: #0d6d55; display: grid; place-items: center; border: 4px solid #d5b46d; }
+      .roulette-wheel { position: relative; width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#0d6d55 0 2.7%, #a92738 2.7% 5.4%, #20252e 5.4% 8.1%, #a92738 8.1% 10.8%, #20252e 10.8% 13.5%, #a92738 13.5% 16.2%, #20252e 16.2% 18.9%, #a92738 18.9% 21.6%, #20252e 21.6% 24.3%, #a92738 24.3% 27%, #20252e 27% 29.7%, #a92738 29.7% 32.4%, #20252e 32.4% 35.1%, #a92738 35.1% 37.8%, #20252e 37.8% 40.5%, #a92738 40.5% 43.2%, #20252e 43.2% 45.9%, #a92738 45.9% 48.6%, #20252e 48.6% 51.3%, #a92738 51.3% 54%, #20252e 54% 56.7%, #a92738 56.7% 59.4%, #20252e 59.4% 62.1%, #a92738 62.1% 64.8%, #20252e 64.8% 67.5%, #a92738 67.5% 70.2%, #20252e 70.2% 72.9%, #a92738 72.9% 75.6%, #20252e 75.6% 78.3%, #a92738 78.3% 81%, #20252e 81% 83.7%, #a92738 83.7% 86.4%, #20252e 86.4% 89.1%, #a92738 89.1% 91.8%, #20252e 91.8% 94.5%, #a92738 94.5% 97.2%, #20252e 97.2% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); transition: transform 2.3s cubic-bezier(.12,.72,.15,1); }
+      .roulette-number { position: absolute; left: 50%; top: 50%; color: #fff; font-size: 0.63rem; font-weight: 800; transform-origin: 0 0; }
+      .roulette-hub { position: absolute; inset: 50% auto auto 50%; width: 52px; height: 52px; transform: translate(-50%, -50%); border-radius: 50%; background: #0d6d55; display: grid; place-items: center; border: 4px solid #d5b46d; color: #fff; font-weight: 900; z-index: 2; }
+      .roulette-pointer { position: absolute; top: 8px; left: 50%; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 18px solid #fff2b2; transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 2px 3px #000); }
       .table-visual { min-height: 180px; border-radius: 100px; background: radial-gradient(ellipse, #17604e, #0b302c); border: 14px solid #6f4a29; display: grid; place-items: center; color: white; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.35); }
       .playing-card { display: inline-grid; place-items: center; width: 42px; height: 58px; margin: 4px; border-radius: 5px; background: #fff; color: #1e293b; font-weight: 800; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
 
@@ -766,7 +766,7 @@
               </div>
               <div class="card">
                 <h2>Roulette</h2>
-                <div class="game-visual roulette-visual"><div class="roulette-wheel" id="rouletteWheel"></div></div>
+                <div class="game-visual roulette-visual"><div class="roulette-pointer"></div><div class="roulette-wheel" id="rouletteWheel"><div class="roulette-hub" id="rouletteHub">0</div></div></div>
                 <form id="rouletteForm">
                   <div class="form-row"><label for="rouletteChoice">Bet choice</label><select id="rouletteChoice"><option value="red">Red (2x)</option><option value="black">Black (2x)</option><option value="0">Exact 0 (36x)</option><option value="7">Exact 7 (36x)</option></select></div>
                   <div class="form-row"><label for="rouletteAmount">Wager</label><input id="rouletteAmount" type="number" min="1" value="1" required /></div>
@@ -937,6 +937,7 @@
         renderEmptyStates();
         renderDailyResetCountdown();
         renderPlinkoBoard();
+        renderRouletteWheel();
         restoreSession();
       }
 
@@ -1061,10 +1062,10 @@
         els.plinkoButton.addEventListener('click', async () => {
           try {
             els.plinkoChip.classList.remove('drop');
-            void els.plinkoChip.offsetWidth;
-            els.plinkoChip.style.setProperty('--chip-x', `${20 + Math.random() * 60}%`);
-            els.plinkoChip.classList.add('drop');
             const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId }) });
+            els.plinkoChip.style.setProperty('--chip-x', `${12.5 + result.result.slot * 9.375}%`);
+            void els.plinkoChip.offsetWidth;
+            els.plinkoChip.classList.add('drop');
             showStatus(els.plinkoResult, 'success', `Slot ${result.result.slot}: ${result.result.payout} e-cash won (${result.result.multiplier}x).`);
             await loadData();
           } catch (error) { showStatus(els.plinkoResult, 'error', error.message); }
@@ -1073,9 +1074,8 @@
         els.rouletteForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           try {
-            els.rouletteWheel.style.transform = 'rotate(1080deg)';
-            setTimeout(() => { els.rouletteWheel.style.transform = ''; }, 900);
             const result = await api('/api/games/roulette', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, choice: document.getElementById('rouletteChoice').value, amount: Number(document.getElementById('rouletteAmount').value) }) });
+            spinRouletteTo(result.result.number);
             showStatus(els.rouletteResult, 'success', `The wheel landed on ${result.result.number}. Payout: ${result.result.payout} e-cash.`);
             await loadData();
           } catch (error) { showStatus(els.rouletteResult, 'error', error.message); }
@@ -1474,11 +1474,32 @@
         const pegs = [];
         for (let row = 0; row < 7; row += 1) {
           for (let column = 0; column < 9; column += 1) {
-            if ((row + column) % 2 === 0) pegs.push('<span class="plinko-peg"></span>');
+            if ((row + column) % 2 === 0) {
+              const x = 12.5 + column * 9.375 + (row % 2 ? 4.7 : 0);
+              const y = 12 + row * 12;
+              pegs.push(`<span class="plinko-peg" style="left:${x}%;top:${y}%"></span>`);
+            }
           }
         }
         const slots = Array.from({ length: 9 }, (_, index) => `<span class="plinko-slot" style="left:${index * 11.11}%">${PLINKO_LABELS[index]}</span>`).join('');
         els.plinkoBoard.innerHTML = pegs.join('') + slots;
+      }
+
+      function renderRouletteWheel() {
+        const rouletteNumbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+        const numberMarkup = rouletteNumbers.map((number, index) => {
+          const angle = index * (360 / rouletteNumbers.length);
+          return `<span class="roulette-number" style="transform:rotate(${angle}deg) translateY(-77px) rotate(${-angle}deg)">${number}</span>`;
+        }).join('');
+        els.rouletteWheel.insertAdjacentHTML('afterbegin', numberMarkup);
+      }
+
+      function spinRouletteTo(number) {
+        const rouletteNumbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+        const index = rouletteNumbers.indexOf(Number(number));
+        const angle = index < 0 ? 0 : index * (360 / rouletteNumbers.length);
+        els.rouletteWheel.style.transform = `rotate(${1440 - angle}deg)`;
+        els.rouletteHub.textContent = number;
       }
 
       function renderGameRooms() {
