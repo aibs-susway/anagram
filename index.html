@@ -805,6 +805,9 @@
             els.authView.classList.add('hidden');
             els.appView.classList.remove('hidden');
             setTheme(result.account.theme || 'light');
+            renderWelcome();
+            renderQuests();
+            renderEcash();
             await loadData();
             showStatus(els.loginStatus, 'success', 'Logged in successfully.');
           } catch (error) {
@@ -1073,18 +1076,31 @@
           return;
         }
 
-        const [accountsResult, postsResult, chatsResult, leaderboardResult] = await Promise.all([
+        const results = await Promise.allSettled([
           api('/api/accounts'),
           api('/api/posts'),
           api('/api/chats'),
           api('/api/leaderboard')
         ]);
 
-        state.accounts = accountsResult.accounts || [];
-        state.posts = postsResult.posts || [];
-        state.chats = chatsResult.chats || [];
-        state.leaderboard = leaderboardResult.leaderboard || [];
-        state.currentAccount = state.accounts.find((account) => account.id === state.currentAccountId) || state.currentAccount;
+        const [accountsResult, postsResult, chatsResult, leaderboardResult] = results;
+        if (accountsResult.status === 'fulfilled') {
+          state.accounts = accountsResult.value.accounts || [];
+        }
+        if (postsResult.status === 'fulfilled') {
+          state.posts = postsResult.value.posts || [];
+        }
+        if (chatsResult.status === 'fulfilled') {
+          state.chats = chatsResult.value.chats || [];
+        }
+        if (leaderboardResult.status === 'fulfilled') {
+          state.leaderboard = leaderboardResult.value.leaderboard || [];
+        }
+
+        const refreshedAccount = state.accounts.find((account) => account.id === state.currentAccountId);
+        if (refreshedAccount) {
+          state.currentAccount = { ...state.currentAccount, ...refreshedAccount };
+        }
 
         renderWelcome();
         renderLeaderboard();
