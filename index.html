@@ -1105,11 +1105,21 @@
         els.stocksList.addEventListener('click', async (event) => {
           const action = event.target.closest('[data-stock-side]');
           if (!action) return;
-          const quantity = Number(document.querySelector('[data-stock-quantity="' + action.dataset.stockSymbol + '"]').value);
+          const card = action.closest('.marketplace-card');
+          const quantityInput = card && card.querySelector('[data-stock-quantity]');
+          const quantity = Number(quantityInput && quantityInput.value);
+          if (!Number.isFinite(quantity) || quantity <= 0) {
+            showStatus(els.stockStatus, 'error', 'Enter a quantity greater than zero.');
+            return;
+          }
           try {
             const trade = await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol: action.dataset.stockSymbol, side: action.dataset.stockSide, quantity }) });
             showStatus(els.stockStatus, 'success', `${trade.result.side === 'buy' ? 'Bought' : 'Sold'} ${trade.result.quantity} ${trade.result.stock.symbol} share(s).`);
-            await loadData();
+            try {
+              await loadData();
+            } catch (refreshError) {
+              showStatus(els.stockStatus, 'success', 'Trade completed. Refresh the page to update the quote.');
+            }
           } catch (error) { showStatus(els.stockStatus, 'error', error.message); }
         });
 
@@ -1485,7 +1495,7 @@
       function renderPlinkoBoard() {
         const pegs = [];
         for (let row = 0; row < 13; row += 1) {
-          const visibleColumns = row + 1;
+          const visibleColumns = Math.min(13, row * 2 + 1);
           const firstColumn = Math.floor((13 - visibleColumns) / 2);
           for (let column = firstColumn; column < firstColumn + visibleColumns; column += 1) {
             const x = 7.7 + column * 7.7;

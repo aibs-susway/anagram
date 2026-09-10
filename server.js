@@ -412,7 +412,10 @@ async function refreshStockQuotes(store) {
 
   await Promise.all(store.stocks.map(async (stock) => {
     try {
-      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.quoteSymbol}?range=1d&interval=1m`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.quoteSymbol}?range=1d&interval=1m`, { signal: controller.signal });
+      clearTimeout(timeout);
       if (!response.ok) return;
       const payload = await response.json();
       const metadata = payload.chart?.result?.[0]?.meta || {};
