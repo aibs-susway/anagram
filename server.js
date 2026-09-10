@@ -15,11 +15,16 @@ const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const PLINKO_DROP_COST = 1;
 const PLINKO_MULTIPLIERS = [0, 0.2, 0.5, 0.8, 1.2, 0.8, 0.5, 0.2, 0];
 const STOCKS = [
-  { symbol: 'ANAG', name: 'Anagram Labs', price: 25 },
-  { symbol: 'CHAT', name: 'ChatWorks', price: 40 },
-  { symbol: 'PLAY', name: 'PlayForge', price: 15 },
-  { symbol: 'CASH', name: 'Cashline', price: 60 },
-  { symbol: 'NOVA', name: 'Nova Systems', price: 90 }
+  { symbol: 'SPX', name: 'S&P 500 Index', price: 500 },
+  { symbol: 'NDX', name: 'Nasdaq-100 Index', price: 420 },
+  { symbol: 'DJI', name: 'Dow Jones Industrial Average', price: 390 },
+  { symbol: 'AAPL', name: 'Apple', price: 210 },
+  { symbol: 'MSFT', name: 'Microsoft', price: 430 },
+  { symbol: 'NVDA', name: 'NVIDIA', price: 145 },
+  { symbol: 'AMZN', name: 'Amazon', price: 225 },
+  { symbol: 'GOOGL', name: 'Alphabet', price: 175 },
+  { symbol: 'META', name: 'Meta Platforms', price: 560 },
+  { symbol: 'BRK.B', name: 'Berkshire Hathaway B', price: 480 }
 ];
 const ADMIN_USERNAME = 'despawn';
 const ADMIN_PASSWORD = 'TalkingRian';
@@ -137,7 +142,10 @@ function loadStore() {
   normalized.transfers = Array.isArray(store.transfers) ? store.transfers : [];
   normalized.marketplace = Array.isArray(store.marketplace) ? store.marketplace : [];
   normalized.games = Array.isArray(store.games) ? store.games : [];
-  normalized.stocks = Array.isArray(store.stocks) && store.stocks.length ? store.stocks : STOCKS.map((stock) => ({ ...stock }));
+  const storedStocks = Array.isArray(store.stocks) ? store.stocks : [];
+  normalized.stocks = storedStocks.some((stock) => stock.symbol === 'SPX')
+    ? storedStocks
+    : STOCKS.map((stock) => ({ ...stock }));
 
   normalized.accounts = normalized.accounts.map((account) => ({
     ...account,

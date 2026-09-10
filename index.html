@@ -447,6 +447,36 @@
         opacity: 0.7;
       }
 
+      .game-visual {
+        position: relative;
+        overflow: hidden;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: #12233d;
+        min-height: 250px;
+        margin: 14px 0;
+      }
+
+      .plinko-board {
+        height: 250px;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(7, 1fr);
+        padding: 18px 24px 36px;
+        background: linear-gradient(150deg, #142b4d, #0c172a);
+      }
+
+      .plinko-peg { width: 8px; height: 8px; border-radius: 50%; background: #e7c879; box-shadow: 0 0 10px rgba(231,200,121,0.7); justify-self: center; align-self: center; }
+      .plinko-slot { position: absolute; bottom: 0; height: 28px; width: 11.11%; display: grid; place-items: center; color: #dfe9ff; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.16); }
+      .plinko-chip { position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translateX(-50%); opacity: 0; }
+      .plinko-chip.drop { animation: plinko-drop 1.2s ease-in forwards; }
+      @keyframes plinko-drop { 0% { opacity: 1; top: 8px; left: 50%; } 100% { opacity: 1; top: 205px; left: var(--chip-x, 50%); } }
+      .roulette-visual { display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle, #1f4f48, #0d2929); }
+      .roulette-wheel { width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#a92738 0 10%, #20252e 10% 20%, #a92738 20% 30%, #20252e 30% 40%, #a92738 40% 50%, #20252e 50% 60%, #a92738 60% 70%, #20252e 70% 80%, #a92738 80% 90%, #20252e 90% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); display: grid; place-items: center; color: white; font-weight: 900; transition: transform 0.9s cubic-bezier(.17,.67,.22,1); }
+      .roulette-wheel::after { content: '0'; width: 56px; height: 56px; border-radius: 50%; background: #0d6d55; display: grid; place-items: center; border: 4px solid #d5b46d; }
+      .table-visual { min-height: 180px; border-radius: 100px; background: radial-gradient(ellipse, #17604e, #0b302c); border: 14px solid #6f4a29; display: grid; place-items: center; color: white; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.35); }
+      .playing-card { display: inline-grid; place-items: center; width: 42px; height: 58px; margin: 4px; border-radius: 5px; background: #fff; color: #1e293b; font-weight: 800; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+
       .settings-panel {
         position: fixed;
         top: 24px;
@@ -730,11 +760,13 @@
               <div class="card">
                 <h2>Plinko</h2>
                 <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
+                <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div><div class="plinko-chip" id="plinkoChip"></div></div>
                 <button type="button" id="plinkoButton">Drop chip for 1 e-cash</button>
                 <div id="plinkoResult" class="status"></div>
               </div>
               <div class="card">
                 <h2>Roulette</h2>
+                <div class="game-visual roulette-visual"><div class="roulette-wheel" id="rouletteWheel"></div></div>
                 <form id="rouletteForm">
                   <div class="form-row"><label for="rouletteChoice">Bet choice</label><select id="rouletteChoice"><option value="red">Red (2x)</option><option value="black">Black (2x)</option><option value="0">Exact 0 (36x)</option><option value="7">Exact 7 (36x)</option></select></div>
                   <div class="form-row"><label for="rouletteAmount">Wager</label><input id="rouletteAmount" type="number" min="1" value="1" required /></div>
@@ -744,6 +776,7 @@
             </div>
             <div class="card" style="margin-top:18px;">
               <h2>Multiplayer tables</h2>
+              <div class="table-visual"><div><div class="playing-card">A</div><div class="playing-card">K</div><br /><span>Texas Hold-em / Blackjack table</span></div></div>
               <form id="gameRoomForm" class="inline">
                 <select id="gameType"><option value="holdem">Texas Hold-em</option><option value="blackjack">Blackjack</option></select>
                 <input id="gameWager" type="number" min="1" value="1" required /><button type="submit">Create table</button>
@@ -817,6 +850,7 @@
     </aside>
 
     <script>
+      const PLINKO_LABELS = ['0x', '0.2x', '0.5x', '0.8x', '1.2x', '0.8x', '0.5x', '0.2x', '0x'];
       const state = {
         accounts: [],
         posts: [],
@@ -889,6 +923,9 @@
         gameRoomStatus: document.getElementById('gameRoomStatus'),
         gameRoomsList: document.getElementById('gameRoomsList'),
         stocksList: document.getElementById('stocksList')
+        ,plinkoBoard: document.getElementById('plinkoBoard'),
+        plinkoChip: document.getElementById('plinkoChip'),
+        rouletteWheel: document.getElementById('rouletteWheel')
       };
 
       document.addEventListener('DOMContentLoaded', init);
@@ -899,6 +936,7 @@
         setTheme(savedTheme);
         renderEmptyStates();
         renderDailyResetCountdown();
+        renderPlinkoBoard();
         restoreSession();
       }
 
@@ -1022,6 +1060,10 @@
 
         els.plinkoButton.addEventListener('click', async () => {
           try {
+            els.plinkoChip.classList.remove('drop');
+            void els.plinkoChip.offsetWidth;
+            els.plinkoChip.style.setProperty('--chip-x', `${20 + Math.random() * 60}%`);
+            els.plinkoChip.classList.add('drop');
             const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId }) });
             showStatus(els.plinkoResult, 'success', `Slot ${result.result.slot}: ${result.result.payout} e-cash won (${result.result.multiplier}x).`);
             await loadData();
@@ -1031,6 +1073,8 @@
         els.rouletteForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           try {
+            els.rouletteWheel.style.transform = 'rotate(1080deg)';
+            setTimeout(() => { els.rouletteWheel.style.transform = ''; }, 900);
             const result = await api('/api/games/roulette', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, choice: document.getElementById('rouletteChoice').value, amount: Number(document.getElementById('rouletteAmount').value) }) });
             showStatus(els.rouletteResult, 'success', `The wheel landed on ${result.result.number}. Payout: ${result.result.payout} e-cash.`);
             await loadData();
@@ -1424,6 +1468,17 @@
         document.querySelectorAll('[data-market-tab]').forEach((button) => {
           button.classList.toggle('active', button.dataset.marketTab === state.activeMarketplaceTab);
         });
+      }
+
+      function renderPlinkoBoard() {
+        const pegs = [];
+        for (let row = 0; row < 7; row += 1) {
+          for (let column = 0; column < 9; column += 1) {
+            if ((row + column) % 2 === 0) pegs.push('<span class="plinko-peg"></span>');
+          }
+        }
+        const slots = Array.from({ length: 9 }, (_, index) => `<span class="plinko-slot" style="left:${index * 11.11}%">${PLINKO_LABELS[index]}</span>`).join('');
+        els.plinkoBoard.innerHTML = pegs.join('') + slots;
       }
 
       function renderGameRooms() {
