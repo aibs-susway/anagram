@@ -466,9 +466,9 @@
 
       .plinko-peg { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #e7c879; box-shadow: 0 0 10px rgba(231,200,121,0.7); transform: translate(-50%, -50%); }
       .plinko-slot { position: absolute; bottom: 0; height: 28px; width: 11.11%; display: grid; place-items: center; color: #dfe9ff; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.16); }
-      .plinko-chip { position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translate(-50%, -50%); opacity: 0; z-index: 2; }
-      .plinko-chip.drop { opacity: 1; animation: plinko-bounce 1.7s cubic-bezier(.2,.75,.35,1) forwards; }
-      @keyframes plinko-bounce { 0% { top: 5%; left: 50%; } 12% { top: 17%; left: 44%; } 24% { top: 29%; left: 53%; } 36% { top: 41%; left: 46%; } 48% { top: 53%; left: 57%; } 60% { top: 65%; left: 49%; } 72% { top: 77%; left: 61%; } 84% { top: 88%; left: 54%; } 100% { top: 92%; left: var(--chip-x, 50%); } }
+      .plinko-chip { position: absolute; top: 5%; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: #ff7a5c; box-shadow: 0 0 14px #ff7a5c; transform: translate(-50%, -50%); z-index: 2; }
+      .plinko-chip.drop { animation: plinko-bounce 1.7s cubic-bezier(.2,.75,.35,1) forwards; }
+      @keyframes plinko-bounce { 0% { opacity: 1; } 100% { opacity: 1; } }
       .roulette-visual { display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle, #1f4f48, #0d2929); }
       .roulette-wheel { position: relative; width: 190px; height: 190px; border-radius: 50%; border: 12px solid #d5b46d; background: conic-gradient(#0d6d55 0 2.7%, #a92738 2.7% 5.4%, #20252e 5.4% 8.1%, #a92738 8.1% 10.8%, #20252e 10.8% 13.5%, #a92738 13.5% 16.2%, #20252e 16.2% 18.9%, #a92738 18.9% 21.6%, #20252e 21.6% 24.3%, #a92738 24.3% 27%, #20252e 27% 29.7%, #a92738 29.7% 32.4%, #20252e 32.4% 35.1%, #a92738 35.1% 37.8%, #20252e 37.8% 40.5%, #a92738 40.5% 43.2%, #20252e 43.2% 45.9%, #a92738 45.9% 48.6%, #20252e 48.6% 51.3%, #a92738 51.3% 54%, #20252e 54% 56.7%, #a92738 56.7% 59.4%, #20252e 59.4% 62.1%, #a92738 62.1% 64.8%, #20252e 64.8% 67.5%, #a92738 67.5% 70.2%, #20252e 70.2% 72.9%, #a92738 72.9% 75.6%, #20252e 75.6% 78.3%, #a92738 78.3% 81%, #20252e 81% 83.7%, #a92738 83.7% 86.4%, #20252e 86.4% 89.1%, #a92738 89.1% 91.8%, #20252e 91.8% 94.5%, #a92738 94.5% 97.2%, #20252e 97.2% 100%); box-shadow: 0 0 0 5px #5b4120, 0 16px 30px rgba(0,0,0,0.35); transition: transform 2.3s cubic-bezier(.12,.72,.15,1); }
       .roulette-number { position: absolute; left: 50%; top: 50%; color: #fff; font-size: 0.63rem; font-weight: 800; transform-origin: 0 0; }
@@ -761,7 +761,7 @@
                 <h2>Plinko</h2>
                 <p class="muted">Each drop costs 1 e-cash. Payouts are intentionally below a fair 1x expected return.</p>
                 <div class="game-visual"><div class="plinko-board" id="plinkoBoard"></div><div class="plinko-chip" id="plinkoChip"></div></div>
-                <button type="button" id="plinkoButton">Drop chip for 1 e-cash</button>
+                <div class="inline" style="align-items:center;"><label for="plinkoCount">Drops</label><input id="plinkoCount" type="number" min="1" max="20" value="1" style="max-width:100px;" /><button type="button" id="plinkoButton">Drop chips</button></div>
                 <div id="plinkoResult" class="status"></div>
               </div>
               <div class="card">
@@ -916,6 +916,7 @@
         marketplaceStatus: document.getElementById('marketplaceStatus'),
         marketplaceList: document.getElementById('marketplaceList'),
         plinkoButton: document.getElementById('plinkoButton'),
+        plinkoCount: document.getElementById('plinkoCount'),
         plinkoResult: document.getElementById('plinkoResult'),
         rouletteForm: document.getElementById('rouletteForm'),
         rouletteResult: document.getElementById('rouletteResult'),
@@ -925,7 +926,8 @@
         stocksList: document.getElementById('stocksList')
         ,plinkoBoard: document.getElementById('plinkoBoard'),
         plinkoChip: document.getElementById('plinkoChip'),
-        rouletteWheel: document.getElementById('rouletteWheel')
+        rouletteWheel: document.getElementById('rouletteWheel'),
+        rouletteHub: document.getElementById('rouletteHub')
       };
 
       document.addEventListener('DOMContentLoaded', init);
@@ -1061,12 +1063,10 @@
 
         els.plinkoButton.addEventListener('click', async () => {
           try {
-            els.plinkoChip.classList.remove('drop');
-            const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId }) });
-            els.plinkoChip.style.setProperty('--chip-x', `${12.5 + result.result.slot * 9.375}%`);
-            void els.plinkoChip.offsetWidth;
-            els.plinkoChip.classList.add('drop');
-            showStatus(els.plinkoResult, 'success', `Slot ${result.result.slot}: ${result.result.payout} e-cash won (${result.result.multiplier}x).`);
+            const count = Math.min(20, Math.max(1, Number(els.plinkoCount.value) || 1));
+            const result = await api('/api/games/plinko', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, count }) });
+            result.result.drops.forEach((drop, index) => animatePlinkoDrop(drop, index));
+            showStatus(els.plinkoResult, 'success', `${result.result.count} drop(s): ${result.result.payout} e-cash won. Total cost: ${result.result.cost}.`);
             await loadData();
           } catch (error) { showStatus(els.plinkoResult, 'error', error.message); }
         });
@@ -1447,6 +1447,9 @@
             const marketplaceResult = await api('/api/marketplace');
             state.marketplace = marketplaceResult.items || [];
             renderMarketplace();
+            const stocksResult = await api('/api/stocks');
+            state.stocks = stocksResult.stocks || [];
+            renderStocks();
           } catch (error) {
             // Keep the current chat view when a background refresh is temporarily unavailable.
           }
@@ -1485,6 +1488,22 @@
         els.plinkoBoard.innerHTML = pegs.join('') + slots;
       }
 
+      function animatePlinkoDrop(drop, index) {
+        const ball = document.createElement('span');
+        ball.className = 'plinko-chip';
+        els.plinkoBoard.appendChild(ball);
+        let position = 0;
+        const frames = [{ top: '5%', left: '50%' }];
+        drop.path.forEach((direction, row) => {
+          position += direction;
+          const left = 50 + position * 4.7;
+          frames.push({ top: `${12 + row * 10.5}%`, left: `${left}%` });
+        });
+        frames.push({ top: '94%', left: `${12.5 + drop.slot * 9.375}%` });
+        ball.animate(frames, { duration: 1700, delay: index * 80, easing: 'cubic-bezier(.2,.75,.35,1)', fill: 'forwards' });
+        setTimeout(() => ball.remove(), 2100 + index * 80);
+      }
+
       function renderRouletteWheel() {
         const rouletteNumbers = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
         const numberMarkup = rouletteNumbers.map((number, index) => {
@@ -1516,7 +1535,7 @@
       function renderStocks() {
         if (!state.stocks.length) { els.stocksList.innerHTML = '<div class="empty-state">Stock quotes unavailable.</div>'; return; }
         const holdings = state.currentAccount?.stocks || {};
-        els.stocksList.innerHTML = state.stocks.map((stock) => `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">${stock.price} e-cash/share</span></div><div class="muted">You own ${holdings[stock.symbol] || 0} shares</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="1" value="1" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`).join('');
+        els.stocksList.innerHTML = state.stocks.map((stock) => `<div class="marketplace-card"><div class="row-between"><strong>${escapeHtml(stock.symbol)} - ${escapeHtml(stock.name)}</strong><span class="pill">$${Number(stock.price).toFixed(2)} / share</span></div><div class="muted">You own ${holdings[stock.symbol] || 0} shares · ${escapeHtml(stock.priceSource || 'Quote pending')}</div><div class="inline" style="margin-top:10px;"><input data-stock-quantity="${stock.symbol}" type="number" min="1" value="1" /><button type="button" data-stock-side="buy" data-stock-symbol="${stock.symbol}">Buy</button><button type="button" class="secondary" data-stock-side="sell" data-stock-symbol="${stock.symbol}">Sell</button></div></div>`).join('');
       }
 
       function renderWelcome() {

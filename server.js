@@ -14,17 +14,18 @@ const MIN_AUCTION_SECONDS = 15;
 const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const PLINKO_DROP_COST = 1;
 const PLINKO_MULTIPLIERS = [0, 0.2, 0.5, 0.8, 1.2, 0.8, 0.5, 0.2, 0];
+const PLINKO_ROWS = 8;
 const STOCKS = [
-  { symbol: 'SPX', name: 'S&P 500 Index', price: 500 },
-  { symbol: 'NDX', name: 'Nasdaq-100 Index', price: 420 },
-  { symbol: 'DJI', name: 'Dow Jones Industrial Average', price: 390 },
-  { symbol: 'AAPL', name: 'Apple', price: 210 },
-  { symbol: 'MSFT', name: 'Microsoft', price: 430 },
-  { symbol: 'NVDA', name: 'NVIDIA', price: 145 },
-  { symbol: 'AMZN', name: 'Amazon', price: 225 },
-  { symbol: 'GOOGL', name: 'Alphabet', price: 175 },
-  { symbol: 'META', name: 'Meta Platforms', price: 560 },
-  { symbol: 'BRK.B', name: 'Berkshire Hathaway B', price: 480 }
+  { symbol: 'SPX', quoteSymbol: '%5EGSPC', name: 'S&P 500 Index', price: 500 },
+  { symbol: 'NDX', quoteSymbol: '%5ENDX', name: 'Nasdaq-100 Index', price: 420 },
+  { symbol: 'DJI', quoteSymbol: '%5EDJI', name: 'Dow Jones Industrial Average', price: 390 },
+  { symbol: 'AAPL', quoteSymbol: 'AAPL', name: 'Apple', price: 210 },
+  { symbol: 'MSFT', quoteSymbol: 'MSFT', name: 'Microsoft', price: 430 },
+  { symbol: 'NVDA', quoteSymbol: 'NVDA', name: 'NVIDIA', price: 145 },
+  { symbol: 'AMZN', quoteSymbol: 'AMZN', name: 'Amazon', price: 225 },
+  { symbol: 'GOOGL', quoteSymbol: 'GOOGL', name: 'Alphabet', price: 175 },
+  { symbol: 'META', quoteSymbol: 'META', name: 'Meta Platforms', price: 560 },
+  { symbol: 'BRK.B', quoteSymbol: 'BRK-B', name: 'Berkshire Hathaway B', price: 480 }
 ];
 const ADMIN_USERNAME = 'despawn';
 const ADMIN_PASSWORD = 'TalkingRian';
@@ -379,15 +380,51 @@ function playGameRoom(store, accountId, roomId) {
   return room;
 }
 
-function playPlinko(store, accountId) {
+function playPlinko(store, accountId, requestedCount = 1) {
   const account = findAccount(store, accountId);
+  const count = Math.min(20, Math.max(1, Number(requestedCount) || 1));
   if (!account || account.isBanned) throw new Error('Account not found or banned.');
-  if (!account.isAdmin && Number(account.eCash || 0) < PLINKO_DROP_COST) throw new Error('You need 1 e-cash to drop a chip.');
-  if (!account.isAdmin) account.eCash = Number(account.eCash || 0) - PLINKO_DROP_COST;
-  const slot = Math.floor(Math.random() * PLINKO_MULTIPLIERS.length);
-  const payout = Math.floor(PLINKO_DROP_COST * PLINKO_MULTIPLIERS[slot]);
-  if (!account.isAdmin) account.eCash += payout;
-  return { slot, multiplier: PLINKO_MULTIPLIERS[slot], cost: PLINKO_DROP_COST, payout };
+  if (!account.isAdmin && Number(account.eCash || 0) < count * PLINKO_DROP_COST) throw new Error(`You need ${count} e-cash for ${count} drops.`);
+  const drops = [];
+  let totalPayout = 0;
+
+  for (let dropIndex = 0; dropIndex < count; dropIndex += 1) {
+    const path = [];
+    let position = 0;
+    for (let row = 0; row < PLINKO_ROWS; row += 1) {
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      path.push(direction);
+      position += direction;
+    }
+    const slot = Math.max(0, Math.min(PLINKO_MULTIPLIERS.length - 1, Math.floor((position + PLINKO_ROWS) / 2)));
+    const payout = Math.floor(PLINKO_DROP_COST * PLINKO_MULTIPLIERS[slot]);
+    totalPayout += payout;
+    drops.push({ path, slot, multiplier: PLINKO_MULTIPLIERS[slot], payout });
+  }
+
+  if (!account.isAdmin) account.eCash += totalPayout - count * PLINKO_DROP_COST;
+  return { drops, count, cost: count * PLINKO_DROP_COST, payout: totalPayout };
+}
+
+async function refreshStockQuotes(store) {
+  if (store.quoteUpdatedAt && Date.now() - new Date(store.quoteUpdatedAt).getTime() < 60000) return;
+
+  await Promise.all(store.stocks.map(async (stock) => {
+    try {
+      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.quoteSymbol}?range=1d&interval=1m`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      const quote = payload.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (Number.isFinite(quote)) {
+        stock.price = Number(quote.toFixed(2));
+        stock.priceSource = 'Yahoo Finance';
+      }
+    } catch (error) {
+      stock.priceSource = 'Fallback quote';
+    }
+  }));
+
+  store.quoteUpdatedAt = new Date().toISOString();
 }
 
 function playRoulette(store, accountId, input) {
@@ -970,6 +1007,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/stocks') {
+    await refreshStockQuotes(store);
+    saveStore(store);
     sendJson(res, 200, { stocks: store.stocks });
     return;
   }
@@ -1162,7 +1201,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/games/plinko') {
     try {
       const body = await readBody(req);
-      const result = playPlinko(store, body.accountId);
+      const result = playPlinko(store, body.accountId, body.count);
       saveStore(store);
       sendJson(res, 200, { result });
     } catch (error) {
@@ -1186,6 +1225,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/stocks/trade') {
     try {
       const body = await readBody(req);
+      await refreshStockQuotes(store);
       const result = tradeStock(store, body.accountId, body);
       saveStore(store);
       sendJson(res, 200, { result });
