@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x'
+          node-version: '22.x'
 
       - name: npm install, build, and test
         run: |
@@ -52,4 +52,4 @@ jobs:
           app-name: 'aibs-anagram'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C9EED14680E34A79921DA32022BADEED }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A91D4C023CE0485E8457BF799F1458F0 }}
