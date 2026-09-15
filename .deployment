@@ -1,0 +1,7 @@
+[config]
+# Command Kudu runs to build the app on Azure App Service.
+# No dev dependencies are needed; the app is plain Node.
+SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+[config]
+command = npm install --production

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Localhost tester for the Anagram "Stocks" tab buy/sell flow.
  * Spawns the real server on an isolated port, then drives the exact HTTP
  * calls the Stocks tab makes and asserts balances + holdings change correctly.

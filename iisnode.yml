@@ -1,0 +1,8 @@
+# Pin the Node.js process used by iisnode on Azure App Service (Windows).
+# Leave nodeProcessCommandLine unset to follow the App Setting
+# WEBSITE_NODE_DEFAULT_VERSION; uncomment and set an explicit path if needed, e.g.:
+# nodeProcessCommandLine: "D:\Program Files\nodejs\node.exe"
+node_env: production
+loggingEnabled: true
+logDirectory: iisnode
+debuggingEnabled: false

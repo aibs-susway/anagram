@@ -1,1 +1,15 @@
+# Runtime data (persisted on the App Service filesystem, not in source control)
 data.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Azure App Service / iisnode logs
+iisnode/
+LogFiles/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
