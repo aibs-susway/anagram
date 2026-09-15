@@ -4,7 +4,7 @@ const path = require('path');
 const { randomBytes } = require('crypto');
 
 const PORT = Number(process.env.PORT || 3000);
-const DATA_FILE = path.join(__dirname, 'data.json');
+const DATA_FILE = process.env.DATA_FILE ? path.resolve(process.env.DATA_FILE) : path.join(__dirname, 'data.json');
 const MAX_DAILY_E_CASH = 100;
 const POST_REWARD = 20;
 const MESSAGE_REWARD = 10;
@@ -13,7 +13,7 @@ const FRIEND_REWARD = 20;
 const MIN_AUCTION_SECONDS = 15;
 const MAX_AUCTION_SECONDS = 14 * 24 * 60 * 60;
 const PLINKO_DROP_COST = 1;
-const PLINKO_PAYOUTS = [1000, 10, 2, 1, 0, 0, 0, 0, 0, 1, 2, 10, 1000];
+const PLINKO_MULTIPLIERS = [1000, 10, 2, 1, 0, 0, 0, 0, 0, 1, 2, 10, 1000];
 const PLINKO_ROWS = 12;
 const STOCKS = [
   { symbol: 'SPX', quoteSymbol: '%5EGSPC', name: 'S&P 500 Index', price: 500 },
@@ -985,6 +985,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname.startsWith('/api/accounts/')) {
+    const accountId = decodeURIComponent(url.pathname.split('/api/accounts/')[1]);
+    const account = findAccount(store, accountId);
+    if (!account) {
+      sendJson(res, 404, { error: 'Account not found.' });
+      return;
+    }
+    sendJson(res, 200, { account: sanitizeAccount(account) });
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/posts') {
     sendJson(res, 200, { posts: store.posts });
     return;
@@ -1242,7 +1253,7 @@ const server = http.createServer(async (req, res) => {
       await refreshStockQuotes(store);
       const result = tradeStock(store, body.accountId, body);
       saveStore(store);
-      sendJson(res, 200, { result });
+      sendJson(res, 200, { result, account: sanitizeAccount(findAccount(store, body.accountId)) });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }

@@ -1121,6 +1121,11 @@
           }
           try {
             const trade = await api('/api/stocks/trade', { method: 'POST', body: JSON.stringify({ accountId: state.currentAccountId, symbol, side, quantity }) });
+            if (trade.account) {
+              state.currentAccount = { ...state.currentAccount, ...trade.account };
+              localStorage.setItem('anagram-session', JSON.stringify(state.currentAccount));
+            }
+            renderStocks();
             showStatus(els.stockStatus, 'success', `${trade.result.side === 'buy' ? 'Bought' : 'Sold'} ${trade.result.quantity} ${trade.result.stock.symbol} share(s).`);
             try {
               await loadData();
@@ -1414,7 +1419,15 @@
         if (gamesResult.status === 'fulfilled') state.games = gamesResult.value.games || [];
         if (stocksResult.status === 'fulfilled') state.stocks = stocksResult.value.stocks || [];
 
-        const refreshedAccount = state.accounts.find((account) => account.id === state.currentAccountId);
+        let refreshedAccount = state.accounts.find((account) => account.id === state.currentAccountId);
+        if (!refreshedAccount && state.currentAccountId) {
+          try {
+            const ownAccount = await api('/api/accounts/' + encodeURIComponent(state.currentAccountId));
+            refreshedAccount = ownAccount.account || null;
+          } catch (refreshError) {
+            refreshedAccount = null;
+          }
+        }
         if (refreshedAccount) {
           state.currentAccount = { ...state.currentAccount, ...refreshedAccount };
           localStorage.setItem('anagram-session', JSON.stringify(state.currentAccount));
