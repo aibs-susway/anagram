@@ -51,11 +51,27 @@ jobs:
         with:
           name: node-app
 
+      # Guard against the most common cause of:
+      #   "Publish profile is invalid for app-name and slot-name provided"
+      # An empty/whitespace secret or a truncated paste fails before Azure is called.
+      - name: Validate publish profile secret
+        env:
+          PUBLISH_PROFILE: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A91D4C023CE0485E8457BF799F1458F0 }}
+        run: |
+          if [ -z "$PUBLISH_PROFILE" ]; then
+            echo "::error::The secret AZUREAPPSERVICE_PUBLISHPROFILE_A91D4C023CE0485E8457BF799F1458F0 is empty or not set."
+            exit 1
+          fi
+          if ! printf '%s' "$PUBLISH_PROFILE" | grep -q "<publishData"; then
+            echo "::error::The publish profile secret does not look like a .PublishSettings XML file (no <publishData> element). Re-download it from the App Service Overview and re-add the secret."
+            exit 1
+          fi
+          echo "Publish profile format looks valid."
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'aibs-anagram'
-          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A91D4C023CE0485E8457BF799F1458F0 }}

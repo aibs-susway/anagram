@@ -194,3 +194,57 @@ If the App Service is Linux rather than Windows, set the runtime stack to
 Keep every source file UTF-8 **without a BOM**. A byte-order mark at the top of a
 `.js` file causes `SyntaxError: Invalid or unexpected token` on older Node runtimes
 and an invalid-JSON error for `package.json`.
+### Fixing "Publish profile is invalid for app-name and slot-name provided"
+
+This error comes from the `azure/webapps-deploy` step and means the **publish
+profile secret does not match the app**. It is a credentials problem, not a code
+problem. The deprecation warnings above it (`punycode`, `Buffer()`, `url.parse()`)
+come from the deploy action itself and are harmless.
+
+Check, in order:
+
+1. **App name matches.** The App Service is `aibs-anagram`; the workflow's
+   `app-name` must be exactly the same, including case.
+2. **The profile is current.** In the Azure portal open the Web App →
+   **Overview → Get publish profile** and re-download it. Azure rotates these
+   credentials, so an older download stops working.
+3. **The secret holds the whole file, unedited.** The secret must be the entire
+   XML text of the `.PublishSettings` file, starting with `<publishData` and
+   ending with `</publishData>`. Do not trim blank lines. In GitHub go to
+   **Settings → Secrets and variables → Actions** and update
+   `AZUREAPPSERVICE_PUBLISHPROFILE_A91D4C023CE0485E8457BF799F1458F0`.
+4. **No stale slot.** If the app has no deployment slot, do not pass
+   `slot-name` at all (the workflow no longer does).
+
+The workflow now validates the secret before calling Azure, so a blank or
+truncated value fails with a clear message instead of the generic Azure error.
+
+### Preferred: authenticate without a publish profile
+
+Publish profiles are easily invalidated. The durable alternative is a service
+principal with RBAC. Create one and add its JSON as the secret `AZURE_CREDENTIALS`:
+
+```bash
+az ad sp create-for-rbac --name "aibs-anagram-deploy" \
+  --role contributor \
+  --scopes /subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Web/sites/aibs-anagram \
+  --sdk-auth
+```
+
+Then swap the deploy step for:
+
+```yaml
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'aibs-anagram'
+          package: .
+```
+
+This never goes stale the way a downloaded profile does, and it can be rotated
+deliberately rather than by surprise.
